@@ -51,3 +51,16 @@ def task_update_status(request, task_id):
     task.save()
     return redirect(f'/planner/?date={task.day_plan.date}')
 
+# planner/views.py
+from django.shortcuts import render, redirect
+from .models import DayPlan, Task
+from django.utils import timezone
+
+def today_plan_view(request):
+    # JSONResponse o'rniga HTML render
+    plan, created = DayPlan.objects.get_or_create(
+        user=request.user,
+        date=timezone.now().date()
+    )
+    tasks = plan.tasks.all().order_by('start_time')
+    return render(request, 'planner/today.html', {'plan': plan, 'tasks': tasks})
