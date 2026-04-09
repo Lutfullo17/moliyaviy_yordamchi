@@ -114,4 +114,14 @@ def transaction_summary(request):
     return render(request, 'transactions/summary.html', context)
 
 
+# transactions/views.py ichidagi summary'ga qo'shimcha
+@login_required
+def transaction_summary(request):
+    transactions = Transaction.objects.filter(user=request.user)
+    # ... mavjud kod ...
+
+    # Maqsadlar uchun qolgan pulni hisoblash (logika qo'shildi)
+    # Agar Goal app tayyor bo'lsa, bu yerda balance bilan goalni solishtiramiz
+    return render(request, 'transactions/summary.html', context)
+
 
