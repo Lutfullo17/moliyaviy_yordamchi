@@ -7,6 +7,7 @@ class Category(models.Model):
     name = models.CharField(
         max_length=100
     )
+    monthly_limit = models.DecimalField(max_digits=12, decimal_places=2, default=0)
 
     user = models.ForeignKey(
         settings.AUTH_USER_MODEL,

@@ -19,14 +19,22 @@ def category_list(request):
 def category_create(request):
     if request.method == 'POST':
         name = request.POST.get('name')
+        limit = request.POST.get('monthly_limit', '0')
 
         if not name or not name.strip():
             return render(request, 'categories/create.html', {
                 'error': 'Name cannot be empty'
             })
 
+        try:
+            raw_limit = str(limit).replace(',', '').strip()
+            monthly_limit = float(raw_limit) if raw_limit else 0
+        except ValueError:
+            monthly_limit = 0
+
         Category.objects.create(
             name=name,
+            monthly_limit=monthly_limit,
             user=request.user,
             is_default=False
         )
@@ -50,19 +58,27 @@ def category_update(request, pk):
 
     if request.method == 'POST':
         name = request.POST.get('name')
+        limit = request.POST.get('monthly_limit', '0')
 
         if not name or not name.strip():
-            return render(request, 'categories/update.html', {
+            return render(request, 'categories/create.html', {
                 'error': 'Name cannot be empty',
                 'category': category
             })
 
+        try:
+            raw_limit = str(limit).replace(',', '').strip()
+            monthly_limit = float(raw_limit) if raw_limit else 0
+        except ValueError:
+            monthly_limit = 0
+
         category.name = name
+        category.monthly_limit = monthly_limit
         category.save()
 
         return redirect('categories:list')
 
-    return render(request, 'categories/update.html', {
+    return render(request, 'categories/create.html', {
         'category': category
     })
 

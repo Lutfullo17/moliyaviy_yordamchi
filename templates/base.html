@@ -40,7 +40,7 @@
                             <i class="fas fa-wallet"></i>
                         </div>
                         <span class="text-2xl font-black tracking-tight bg-clip-text text-transparent bg-gradient-to-r from-indigo-600 to-purple-600">
-                            Moliya<span class="text-slate-800">Bot</span>
+                                Moliyaviy<span class="text-slate-800">Yordamchi</span>
                         </span>
                     </a>
                 </div>
@@ -63,8 +63,9 @@
                         </button>
                         
                         <div x-show="notifOpen" x-transition.opacity style="display: none;" class="absolute right-0 mt-2 w-80 bg-white rounded-xl shadow-xl shadow-slate-200 border border-slate-100 py-2 z-50 overflow-hidden">
-                            <div class="px-4 py-2 border-b border-slate-100">
+                            <div class="px-4 py-2 border-b border-slate-100 flex justify-between items-center">
                                 <h3 class="font-bold text-slate-800 text-sm">Bildirishnomalar</h3>
+                                <button id="mark-all-read-btn" class="hidden text-xs text-indigo-600 hover:text-indigo-800 font-semibold focus:outline-none">Barchasini o'qish</button>
                             </div>
                             <div id="notif-list" class="max-h-64 overflow-y-auto w-full">
                                 <div class="p-4 text-center text-sm text-slate-500 italic">Yangi xabarlar yo'q</div>
@@ -139,9 +140,9 @@
         <div class="max-w-7xl mx-auto px-4 py-8 flex flex-col md:flex-row justify-between items-center gap-4">
             <div class="flex items-center gap-2">
                 <i class="fas fa-wallet text-indigo-600"></i>
-                <span class="text-lg font-black tracking-tight text-slate-800">Moliya<span class="text-indigo-600">Bot</span></span>
+                <span class="text-lg font-black tracking-tight text-slate-800">Moliyaviy<span class="text-indigo-600">Yordamchi</span></span>
             </div>
-            <p class="text-sm text-slate-500 font-medium text-center">&copy; 2026 MoliyaBot. Barcha huquqlar himoyalangan.</p>
+            <p class="text-sm text-slate-500 font-medium text-center">&copy; 2026 Moliyaviy Yordamchi. Barcha huquqlar himoyalangan.</p>
             <div class="flex gap-4 text-slate-400">
                 <a href="#" class="hover:text-indigo-600 transition-colors"><i class="fab fa-telegram text-xl"></i></a>
                 <a href="#" class="hover:text-indigo-600 transition-colors"><i class="fab fa-instagram text-xl"></i></a>
@@ -200,12 +201,19 @@
                     .then(data => {
                         const list = document.getElementById('notif-list');
                         const badge = document.getElementById('notif-badge');
+                        const markReadBtn = document.getElementById('mark-all-read-btn');
                         
                         if (data.tasks && data.tasks.length > 0) {
-                            badge.classList.remove('hidden');
+                            window.currentTasks = data.tasks;
                             let html = '';
+                            let hasUnread = false;
                             
                             data.tasks.forEach(task => {
+                                const readBadgeKey = 'read_badge_' + task.id;
+                                if (!localStorage.getItem(readBadgeKey)) {
+                                    hasUnread = true;
+                                }
+
                                 html += `
                                 <div class="px-4 py-3 hover:bg-slate-50 border-b border-slate-50 transition-colors">
                                     <div class="flex items-start gap-3">
@@ -233,17 +241,86 @@
                                 }
                             });
                             list.innerHTML = html;
+                            
+                            if (hasUnread) {
+                                badge.classList.remove('hidden');
+                                if (markReadBtn) markReadBtn.classList.remove('hidden');
+                            } else {
+                                badge.classList.add('hidden');
+                                if (markReadBtn) markReadBtn.classList.add('hidden');
+                            }
                         } else {
+                            window.currentTasks = [];
                             badge.classList.add('hidden');
+                            if (markReadBtn) markReadBtn.classList.add('hidden');
                             list.innerHTML = `<div class="p-4 text-center text-sm text-slate-500 italic">Yangi xabarlar yo'q</div>`;
                         }
                     })
                     .catch(err => console.error('Error fetching notifications:', err));
             }
 
+            // Mark all as read listener
+            const markReadBtn = document.getElementById('mark-all-read-btn');
+            if (markReadBtn) {
+                markReadBtn.addEventListener('click', function(e) {
+                    e.stopPropagation();
+                    if (window.currentTasks) {
+                        window.currentTasks.forEach(task => {
+                            localStorage.setItem('read_badge_' + task.id, new Date().getTime());
+                        });
+                    }
+                    document.getElementById('notif-badge').classList.add('hidden');
+                    this.classList.add('hidden');
+                });
+            }
+
             // Run check every minute
             checkUpcomingTasks();
             setInterval(checkUpcomingTasks, 30000); // 30 seconds
+
+            // =============================================
+            // GLOBAL MONEY FORMATTING (1,000,000 format)
+            // =============================================
+            function formatMoney(num) {
+                const n = parseFloat(String(num).replace(/,/g, '')) || 0;
+                return Math.round(n).toLocaleString('en-US');
+            }
+
+            // Format all display elements with class fmt-money
+            document.querySelectorAll('.fmt-money').forEach(function(el) {
+                const raw = parseFloat(el.dataset.raw || el.textContent.replace(/,/g, '')) || 0;
+                el.textContent = formatMoney(raw);
+            });
+
+            // Money input: type=text with comma formatting
+            document.querySelectorAll('.money-input').forEach(function(input) {
+                // Format existing value
+                if (input.value) {
+                    const raw = parseFloat(input.value.replace(/,/g, '')) || 0;
+                    if (raw > 0) input.value = formatMoney(raw);
+                }
+
+                input.addEventListener('input', function() {
+                    const pos = this.selectionStart;
+                    const oldLen = this.value.length;
+                    const rawVal = this.value.replace(/[^0-9]/g, '');
+                    if (rawVal === '') { this.value = ''; return; }
+                    const formatted = parseInt(rawVal, 10).toLocaleString('en-US');
+                    this.value = formatted;
+                    // Restore cursor position
+                    const newLen = this.value.length;
+                    this.setSelectionRange(pos + (newLen - oldLen), pos + (newLen - oldLen));
+                });
+
+                // Before form submit, set hidden input or strip commas
+                const form = input.closest('form');
+                if (form && !input.dataset.hooked) {
+                    input.dataset.hooked = '1';
+                    form.addEventListener('submit', function() {
+                        input.value = input.value.replace(/,/g, '');
+                    });
+                }
+            });
         });
     </script>
     {% endif %}

@@ -57,7 +57,7 @@
                         </td>
                         <td class="px-6 py-4 whitespace-nowrap">
                             <span class="text-base font-bold {% if trans.type == 'income' %}text-emerald-600{% else %}text-red-500{% endif %}">
-                                {% if trans.type == 'income' %}+{% else %}-{% endif %}{{ trans.amount }}
+                                {% if trans.type == 'income' %}+{% else %}-{% endif %}<span class="fmt-money">{{ trans.amount|floatformat:0 }}</span> so'm
                             </span>
                         </td>
                         <td class="px-6 py-4 text-right space-x-2">

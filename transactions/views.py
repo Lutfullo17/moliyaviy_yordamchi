@@ -6,6 +6,47 @@ from django.utils.dateparse import parse_date
 from .models import Transaction
 from .forms import TransactionForm
 from categories.models import Category
+from django.utils import timezone
+
+
+def dashboard(request):
+    current_month = timezone.now().month
+    categories = Category.objects.filter(user=request.user) | Category.objects.filter(is_default=True)
+
+    budget_data = []
+    for cat in categories:
+        # Ushbu oyda ushbu kategoriya bo'yicha qilingan xarajatlar yig'indisi
+        spent = Transaction.objects.filter(
+            category=cat,
+            type='expense',
+            date__month=current_month,
+            user=request.user
+        ).aggregate(Sum('amount'))['amount__sum'] or 0
+
+        limit = cat.monthly_limit
+
+        # Foizni hisoblaymiz
+        percent = 0
+        if limit > 0:
+            percent = (spent / limit) * 100
+
+        # Svetofor rangini aniqlaymiz
+        color = "bg-green-500"  # 50% gacha yashil
+        if percent >= 100:
+            color = "bg-red-600"  # Limitdan oshsa qizil
+        elif percent >= 80:
+            color = "bg-yellow-500"  # 80% dan oshsa sariq
+
+        budget_data.append({
+            'category': cat.name,
+            'spent': spent,
+            'limit': limit,
+            'percent': min(percent, 100),  # 100 dan oshib ketmasligi uchun
+            'real_percent': percent,
+            'color': color
+        })
+
+    return render(request, 'dashboard.html', {'budget_data': budget_data})
 
 #transactions_list
 @login_required
@@ -114,4 +155,15 @@ def transaction_summary(request):
     return render(request, 'transactions/summary.html', context)
 
 
+from .utils import get_uzs_rate
+def transaction_create1(request):
+    if request.method == 'POST':
+        amount = float(request.POST.get('amount'))
+        currency = request.POST.get('currency')  # HTML'da select bo'lishi kerak: USD yoki UZS
+
+        final_amount = amount
+
+        if currency == 'USD':
+            rate = get_uzs_rate()
+            final_amount = amount * rate
 

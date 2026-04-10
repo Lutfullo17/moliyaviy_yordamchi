@@ -31,7 +31,7 @@ def goal_update(request, pk):
             return redirect('goals:list')
     else:
         form = GoalForm(instance=goal)
-    return render(request, 'goals/update.html', {'form': form, 'goal': goal})
+    return render(request, 'goals/create.html', {'form': form, 'goal': goal})
 
 @login_required
 def goal_delete(request, pk):
