@@ -1,0 +1,26 @@
+{% extends 'base.html' %}
+
+{% block content %}
+<div class="max-w-md mx-auto">
+    <div class="bg-white border border-slate-200 rounded-3xl shadow-sm p-10 text-center">
+        <div class="w-20 h-20 bg-red-50 text-red-500 rounded-full flex items-center justify-center mx-auto mb-6">
+            <i class="fas fa-trash-alt text-3xl"></i>
+        </div>
+        
+        <h1 class="text-2xl font-bold text-slate-900 mb-2">Maqsadni o'chirish?</h1>
+        <p class="text-slate-500 mb-8">
+            <span class="font-bold text-slate-800 capitalize">"{{ goal.title }}"</span> maqsadini o'chirib tashlamoqchimisiz? To'plangan ma'lumotlar yo'qoladi.
+        </p>
+
+        <form method="POST" class="flex flex-col gap-3">
+            {% csrf_token %}
+            <button type="submit" class="w-full bg-red-500 hover:bg-red-600 text-white font-bold py-3.5 rounded-2xl transition-all">
+                O'chirilsin
+            </button>
+            <a href="{% url 'goals:list' %}" class="w-full bg-slate-100 hover:bg-slate-200 text-slate-700 font-bold py-3.5 rounded-2xl transition-all">
+                Orqaga qaytish
+            </a>
+        </form>
+    </div>
+</div>
+{% endblock %}

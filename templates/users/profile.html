@@ -1,0 +1,95 @@
+{% extends 'base.html' %}
+{% block title %}Profil Sahifasi - MoliyaBot{% endblock %}
+
+{% block content %}
+<div class="max-w-3xl mx-auto space-y-6">
+    <div class="flex items-center justify-between mb-2">
+        <h1 class="text-2xl font-extrabold text-slate-800">Shaxsiy Profil</h1>
+        <a href="javascript:history.back()" class="text-indigo-600 hover:text-indigo-800 font-semibold text-sm flex items-center gap-2">
+            <i class="fas fa-arrow-left"></i> Orqaga
+        </a>
+    </div>
+
+    {% if messages %}
+    <div class="space-y-2 mb-6">
+        {% for message in messages %}
+        <div class="p-4 rounded-xl text-sm font-semibold 
+            {% if message.tags == 'success' %}bg-green-50 text-green-700 border border-green-200
+            {% elif message.tags == 'error' %}bg-red-50 text-red-700 border border-red-200
+            {% else %}bg-blue-50 text-blue-700 border border-blue-200{% endif %}">
+            {{ message }}
+        </div>
+        {% endfor %}
+    </div>
+    {% endif %}
+
+    <div class="bg-white rounded-3xl border border-slate-100 shadow-sm overflow-hidden">
+        <form method="POST" enctype="multipart/form-data" class="p-6 sm:p-8">
+            {% csrf_token %}
+            
+            <div class="flex flex-col sm:flex-row items-center gap-8 mb-8 pb-8 border-b border-slate-100">
+                <div class="relative group">
+                    <div class="w-32 h-32 rounded-full border-4 border-indigo-50 shadow-md overflow-hidden bg-indigo-50 flex flex-col justify-center items-center group-hover:border-indigo-100 transition-colors">
+                        {% if user.profile_picture %}
+                           <img src="{{ user.profile_picture.url }}" id="profile-preview" class="w-full h-full object-cover">
+                        {% else %}
+                           <span class="text-4xl font-black text-indigo-300">{{ user.username|first|upper }}</span>
+                           <img src="" id="profile-preview" class="w-full h-full object-cover hidden absolute inset-0">
+                        {% endif %}
+                    </div>
+                    <label for="id_profile_picture" class="absolute bottom-0 right-0 w-10 h-10 bg-indigo-600 rounded-full flex justify-center items-center text-white cursor-pointer hover:bg-indigo-700 shadow-lg transition-transform hover:scale-105">
+                        <i class="fas fa-camera"></i>
+                    </label>
+                    <input type="file" name="profile_picture" id="id_profile_picture" accept="image/*" class="hidden" onchange="previewImage(event)">
+                </div>
+                <div class="text-center sm:text-left flex-1">
+                    <h2 class="text-xl font-bold text-slate-800">{{ user.first_name|default:user.username }}</h2>
+                    <p class="text-slate-500 font-medium text-sm mt-1">Dasturga qo'shilgan vaqti: {{ user.date_joined|date:"d M, Y" }}</p>
+                </div>
+            </div>
+
+            <div class="space-y-5">
+                <div class="grid grid-cols-1 md:grid-cols-2 gap-5">
+                    <div>
+                        <label class="block text-sm font-bold text-slate-700 mb-2">Ism (First Name)</label>
+                        <input type="text" name="first_name" value="{{ user.first_name }}" class="w-full px-4 py-3 rounded-xl border border-slate-200 focus:ring-2 focus:ring-indigo-100 focus:border-indigo-400 outline-none transition-all placeholder:text-slate-400 font-medium" placeholder="Ismingizni kiriting">
+                    </div>
+                    <div>
+                        <label class="block text-sm font-bold text-slate-700 mb-2">Foydalanuvchi nomi (Username)</label>
+                        <input type="text" name="username" value="{{ user.username }}" class="w-full px-4 py-3 rounded-xl border border-slate-200 focus:ring-2 focus:ring-indigo-100 focus:border-indigo-400 outline-none transition-all placeholder:text-slate-400 font-medium bg-slate-50" required>
+                    </div>
+                </div>
+
+                <div>
+                    <label class="block text-sm font-bold text-slate-700 mb-2">Email manzil</label>
+                    <input type="email" name="email" value="{{ user.email }}" class="w-full px-4 py-3 rounded-xl border border-slate-200 focus:ring-2 focus:ring-indigo-100 focus:border-indigo-400 outline-none transition-all placeholder:text-slate-400 font-medium">
+                </div>
+            </div>
+
+            <div class="mt-8 pt-6 flex justify-end">
+                <button type="submit" class="bg-indigo-600 hover:bg-indigo-700 text-white px-8 py-3 rounded-xl font-bold shadow-lg shadow-indigo-100 transition-all flex items-center gap-2">
+                    <i class="fas fa-save"></i> Saqlash
+                </button>
+            </div>
+        </form>
+    </div>
+</div>
+
+<script>
+    function previewImage(event) {
+        var input = event.target;
+        var preview = document.getElementById('profile-preview');
+        if (input.files && input.files[0]) {
+            var reader = new FileReader();
+            reader.onload = function(e) {
+                preview.src = e.target.result;
+                preview.classList.remove('hidden');
+                // Hide fallback text if image uploaded
+                let span = preview.parentElement.querySelector('span');
+                if(span) span.style.display = 'none';
+            }
+            reader.readAsDataURL(input.files[0]);
+        }
+    }
+</script>
+{% endblock %}

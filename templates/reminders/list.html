@@ -1,0 +1,66 @@
+{% extends 'base.html' %}
+
+{% block title %}Eslatmalar - MoliyaBot{% endblock %}
+
+{% block content %}
+<div class="max-w-4xl mx-auto">
+    <div class="flex flex-col md:flex-row md:items-center justify-between mb-8 gap-4">
+        <div>
+            <h1 class="text-2xl font-bold text-slate-900 flex items-center gap-2">
+                <i class="fas fa-bell text-amber-500"></i> Eslatmalar
+            </h1>
+            <p class="text-slate-500 text-sm">Muhim muddatlarni o'tkazib yubormang.</p>
+        </div>
+        <a href="{% url 'reminders:create' %}" class="inline-flex items-center justify-center px-6 py-3 bg-amber-500 hover:bg-amber-600 text-white font-semibold rounded-2xl shadow-lg shadow-amber-100 transition-all gap-2">
+            <i class="fas fa-plus"></i>
+            Eslatma qo'shish
+        </a>
+    </div>
+
+    <div class="space-y-4">
+        {% for reminder in reminders %}
+        <div class="bg-white border {% if reminder.is_done %}border-slate-200 opacity-60{% else %}border-amber-100 shadow-sm{% endif %} rounded-3xl p-5 flex items-start gap-4 transition-all">
+            <div class="h-12 w-12 rounded-2xl flex items-center justify-center flex-shrink-0 
+                {% if reminder.is_done %} bg-slate-100 text-slate-400 {% else %} bg-amber-50 text-amber-600 {% endif %}">
+                <i class="fas {% if reminder.is_done %}fa-check-double{% else %}fa-clock{% endif %} text-lg"></i>
+            </div>
+
+            <div class="flex-1 min-w-0">
+                <div class="flex justify-between items-start">
+                    <h3 class="font-bold text-slate-900 text-lg truncate {% if reminder.is_done %}line-through{% endif %}">
+                        {{ reminder.title }}
+                    </h3>
+                    <span class="text-[11px] font-bold uppercase tracking-widest px-2 py-1 rounded-lg 
+                        {% if reminder.is_done %} bg-slate-100 text-slate-500 {% else %} bg-red-50 text-red-500 {% endif %}">
+                        {{ reminder.remind_time|time:"H:i" }}
+                    </span>
+                </div>
+                
+                {% if reminder.description %}
+                    <p class="text-slate-500 text-sm mt-1 mb-3">{{ reminder.description }}</p>
+                {% endif %}
+
+                <div class="flex items-center gap-4 text-xs font-medium">
+                    <span class="flex items-center gap-1 text-slate-400">
+                        <i class="far fa-calendar"></i> {{ reminder.remind_time|date:"d-M, Y" }}
+                    </span>
+                    {% if not reminder.is_done %}
+                    <span class="text-amber-600">
+                        <i class="fas fa-hourglass-half"></i> Kutilmoqda
+                    </span>
+                    {% endif %}
+                </div>
+            </div>
+        </div>
+        {% empty %}
+        <div class="text-center py-20 bg-white border border-dashed border-slate-300 rounded-3xl">
+            <div class="bg-slate-50 w-20 h-20 rounded-full flex items-center justify-center mx-auto mb-4">
+                <i class="fas fa-bell-slash text-slate-300 text-3xl"></i>
+            </div>
+            <h3 class="text-lg font-medium text-slate-900">Hozircha eslatmalar yo'q</h3>
+            <p class="text-slate-500">Tizim sizga kerakli vaqtda xabar beradi.</p>
+        </div>
+        {% endfor %}
+    </div>
+</div>
+{% endblock %}

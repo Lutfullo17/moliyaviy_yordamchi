@@ -1,0 +1,60 @@
+{% extends 'base.html' %}
+
+{% block title %}Kategoriyalar - MoliyaBot{% endblock %}
+
+{% block content %}
+<div class="max-w-4xl mx-auto">
+    <div class="flex flex-col md:flex-row md:items-center justify-between mb-8 gap-4">
+        <div>
+            <h1 class="text-2xl font-bold text-slate-900">Xarajat Kategoriyalari</h1>
+            <p class="text-slate-500 text-sm">Xarajatlaringizni tartibga solish uchun bo'limlar.</p>
+        </div>
+        <a href="{% url 'categories:create' %}" class="inline-flex items-center justify-center px-5 py-2.5 bg-blue-600 hover:bg-blue-700 text-white text-sm font-semibold rounded-xl shadow-lg shadow-blue-200 transition-all gap-2">
+            <i class="fas fa-plus text-xs"></i>
+            Yangi kategoriya
+        </a>
+    </div>
+
+    <div class="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-4">
+        {% for category in categories %}
+        <div class="bg-white border border-slate-200 p-5 rounded-2xl shadow-sm hover:shadow-md transition-shadow relative overflow-hidden group">
+            {% if category.is_default %}
+                <div class="absolute top-0 right-0">
+                    <span class="bg-amber-100 text-amber-700 text-[10px] uppercase font-bold px-3 py-1 rounded-bl-xl shadow-sm">Tizim</span>
+                </div>
+            {% endif %}
+
+            <div class="flex items-center gap-4">
+                <div class="h-12 w-12 rounded-xl bg-blue-50 flex items-center justify-center text-blue-600">
+                    <i class="fas fa-tag text-lg"></i>
+                </div>
+                <div class="flex-1 min-w-0">
+                    <h3 class="text-lg font-semibold text-slate-800 truncate capitalize">{{ category.name }}</h3>
+                    <p class="text-xs text-slate-400">Yaratilgan: {{ category.created_at|date:"d.m.Y" }}</p>
+                </div>
+            </div>
+
+            <div class="mt-6 flex items-center gap-3 border-t border-slate-50 pt-4 opacity-0 group-hover:opacity-100 transition-opacity">
+                {% if not category.is_default %}
+                <a href="{% url 'categories:update' category.pk %}" class="text-xs font-medium text-blue-600 hover:text-blue-800 flex items-center gap-1">
+                    <i class="fas fa-edit"></i> Tahrirlash
+                </a>
+                <a href="{% url 'categories:delete' category.pk %}" class="text-xs font-medium text-red-500 hover:text-red-700 flex items-center gap-1">
+                    <i class="fas fa-trash"></i> O'chirish
+                </a>
+                {% else %}
+                <span class="text-xs text-slate-400 italic">Standart kategoriya o'zgartirilmaydi</span>
+                {% endif %}
+            </div>
+        </div>
+        {% empty %}
+        <div class="col-span-full py-12 text-center">
+            <div class="bg-slate-100 w-16 h-16 rounded-full flex items-center justify-center mx-auto mb-4">
+                <i class="fas fa-folder-open text-slate-400 text-2xl"></i>
+            </div>
+            <p class="text-slate-500">Hozircha hech qanday kategoriya yo'q.</p>
+        </div>
+        {% endfor %}
+    </div>
+</div>
+{% endblock %}

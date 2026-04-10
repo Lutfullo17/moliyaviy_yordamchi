@@ -1,0 +1,251 @@
+<!DOCTYPE html>
+<html lang="uz">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>{% block title %}MoliyaBot - Shaxsiy moliya yordamchisi{% endblock %}</title>
+
+    <script src="https://cdn.tailwindcss.com"></script>
+    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css">
+    <link href="https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700;800&display=swap" rel="stylesheet">
+    
+    <!-- Alpine.js for interactive UI elements -->
+    <script defer src="https://cdn.jsdelivr.net/npm/alpinejs@3.x.x/dist/cdn.min.js"></script>
+
+    <!-- Flatpickr for 24-hour time formatting -->
+    <link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/flatpickr/dist/flatpickr.min.css">
+    <script src="https://cdn.jsdelivr.net/npm/flatpickr"></script>
+
+    <style>
+        body { font-family: 'Inter', sans-serif; }
+        .glassmorphism {
+            background: rgba(255, 255, 255, 0.7);
+            backdrop-filter: blur(10px);
+            -webkit-backdrop-filter: blur(10px);
+            border: 1px solid rgba(255, 255, 255, 0.3);
+        }
+    </style>
+</head>
+<body class="bg-slate-50 text-slate-800 min-h-screen flex flex-col font-sans antialiased selection:bg-indigo-200">
+
+    <!-- Notification Toast Container -->
+    <div id="toast-container" class="fixed top-20 right-4 z-50 flex flex-col gap-2 pointer-events-none"></div>
+
+    <nav class="glassmorphism sticky top-0 z-40 border-b border-indigo-100/50 shadow-sm transition-all" x-data="{ mobileMenuOpen: false, profileDropdown: false }">
+        <div class="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
+            <div class="flex justify-between h-16">
+                <div class="flex items-center">
+                    <a href="/" class="flex items-center gap-3 group">
+                        <div class="bg-gradient-to-br from-indigo-500 to-purple-600 text-white p-2.5 rounded-xl shadow-lg shadow-indigo-200 group-hover:scale-105 transition-transform duration-300">
+                            <i class="fas fa-wallet"></i>
+                        </div>
+                        <span class="text-2xl font-black tracking-tight bg-clip-text text-transparent bg-gradient-to-r from-indigo-600 to-purple-600">
+                            Moliya<span class="text-slate-800">Bot</span>
+                        </span>
+                    </a>
+                </div>
+
+                {% if user.is_authenticated %}
+                <div class="hidden lg:flex items-center space-x-6">
+                    <a href="{% url 'dashboard' %}" class="text-sm font-semibold text-slate-600 hover:text-indigo-600 transition-colors">Bosh sahifa</a>
+                    <a href="{% url 'transactions:summary' %}" class="text-sm font-semibold text-slate-600 hover:text-indigo-600 transition-colors">Tranzaksiyalar</a>
+                    <a href="{% url 'goals:list' %}" class="text-sm font-semibold text-slate-600 hover:text-indigo-600 transition-colors">Maqsadlar</a>
+                    <a href="{% url 'daily-plan' %}" class="text-sm font-semibold text-slate-600 hover:text-indigo-600 transition-colors">Reja</a>
+                    <a href="{% url 'categories:list' %}" class="text-sm font-semibold text-slate-600 hover:text-indigo-600 transition-colors">Kategoriyalar</a>
+                </div>
+
+                <div class="flex items-center gap-4">
+                    <!-- Notifications Bell -->
+                    <div class="relative" x-data="{ notifOpen: false, reqCount: 0 }" @click.away="notifOpen = false">
+                        <button @click="notifOpen = !notifOpen" class="relative p-2 text-slate-500 hover:text-indigo-600 hover:bg-slate-100 rounded-full transition-all focus:outline-none">
+                            <i class="fas fa-bell text-lg"></i>
+                            <span id="notif-badge" class="hidden absolute top-0.5 right-1 h-2.5 w-2.5 bg-red-500 rounded-full border-2 border-white"></span>
+                        </button>
+                        
+                        <div x-show="notifOpen" x-transition.opacity style="display: none;" class="absolute right-0 mt-2 w-80 bg-white rounded-xl shadow-xl shadow-slate-200 border border-slate-100 py-2 z-50 overflow-hidden">
+                            <div class="px-4 py-2 border-b border-slate-100">
+                                <h3 class="font-bold text-slate-800 text-sm">Bildirishnomalar</h3>
+                            </div>
+                            <div id="notif-list" class="max-h-64 overflow-y-auto w-full">
+                                <div class="p-4 text-center text-sm text-slate-500 italic">Yangi xabarlar yo'q</div>
+                            </div>
+                        </div>
+                    </div>
+                    <div class="relative" x-data="{ open: false }" @click.away="open = false">
+                        <button @click="open = !open" class="flex items-center gap-2 focus:outline-none focus:ring-2 focus:ring-indigo-100 rounded-full p-1 transition-all hover:bg-slate-100">
+                            <div class="flex flex-col items-end mr-1 hidden sm:flex">
+                                <span class="text-xs font-bold text-slate-800">{{ user.username }}</span>
+                                <span class="text-[10px] text-slate-400 font-medium whitespace-nowrap overflow-hidden text-ellipsis max-w-[100px]">{{ user.email|default:'Profilni sozlang' }}</span>
+                            </div>
+                            {% if user.profile_picture %}
+                                <img src="{{ user.profile_picture.url }}" class="w-9 h-9 rounded-full border-2 border-white shadow-sm object-cover">
+                            {% else %}
+                                <div class="w-9 h-9 rounded-full bg-indigo-100 flex items-center justify-center text-indigo-600 font-bold border-2 border-white shadow-sm">
+                                    {{ user.username|first|upper }}
+                                </div>
+                            {% endif %}
+                            <i class="fas fa-chevron-down text-xs text-slate-400"></i>
+                        </button>
+                        
+                        <!-- Dropdown -->
+                        <div x-show="open" x-transition:enter="transition ease-out duration-200" x-transition:enter-start="opacity-0 scale-95" x-transition:enter-end="opacity-100 scale-100" x-transition:leave="transition ease-in duration-75" x-transition:leave-start="opacity-100 scale-100" x-transition:leave-end="opacity-0 scale-95" style="display: none;" class="absolute right-0 mt-2 w-48 bg-white rounded-xl shadow-lg shadow-slate-200 border border-slate-100 py-1 z-50 overflow-hidden">
+                            <a href="{% url 'users:profile' %}" class="block px-4 py-2.5 text-sm font-medium text-slate-700 hover:bg-indigo-50 hover:text-indigo-600">
+                                <i class="fas fa-user-circle mr-2 w-4"></i> Profil
+                            </a>
+                            <hr class="border-slate-100">
+                            <form action="{% url 'users:logout' %}" method="POST">
+                                {% csrf_token %}
+                                <button type="submit" class="block w-full text-left px-4 py-2.5 text-sm font-bold text-red-600 hover:bg-red-50">
+                                    <i class="fas fa-sign-out-alt mr-2 w-4"></i> Chiqish
+                                </button>
+                            </form>
+                        </div>
+                    </div>
+                    
+                    <!-- Mobile menu button -->
+                    <div class="flex items-center lg:hidden">
+                        <button @click="mobileMenuOpen = !mobileMenuOpen" class="text-slate-500 hover:text-slate-700 focus:outline-none">
+                            <i class="fas fa-bars text-xl"></i>
+                        </button>
+                    </div>
+                </div>
+                {% else %}
+                <div class="flex items-center gap-3">
+                    <a href="{% url 'users:login' %}" class="text-sm font-bold text-slate-600 hover:text-indigo-600 py-2">Kirish</a>
+                    <a href="{% url 'users:register' %}" class="bg-gradient-to-r from-indigo-600 to-purple-600 text-white px-5 py-2.5 rounded-xl text-sm font-bold shadow-lg shadow-indigo-200 hover:shadow-indigo-300 transform hover:-translate-y-0.5 transition-all">Ro'yxatdan o'tish</a>
+                </div>
+                {% endif %}
+            </div>
+        </div>
+
+        {% if user.is_authenticated %}
+        <!-- Mobile Menu -->
+        <div x-show="mobileMenuOpen" style="display: none;" class="lg:hidden bg-white border-t border-slate-100 py-2 px-4 space-y-1 shadow-lg absolute w-full left-0">
+            <a href="{% url 'dashboard' %}" class="block px-3 py-2 rounded-md text-base font-medium text-slate-700 hover:text-indigo-600 hover:bg-indigo-50">Bosh sahifa</a>
+            <a href="{% url 'transactions:summary' %}" class="block px-3 py-2 rounded-md text-base font-medium text-slate-700 hover:text-indigo-600 hover:bg-indigo-50">Tranzaksiyalar</a>
+            <a href="{% url 'goals:list' %}" class="block px-3 py-2 rounded-md text-base font-medium text-slate-700 hover:text-indigo-600 hover:bg-indigo-50">Maqsadlar</a>
+            <a href="{% url 'daily-plan' %}" class="block px-3 py-2 rounded-md text-base font-medium text-slate-700 hover:text-indigo-600 hover:bg-indigo-50">Reja</a>
+            <a href="{% url 'categories:list' %}" class="block px-3 py-2 rounded-md text-base font-medium text-slate-700 hover:text-indigo-600 hover:bg-indigo-50">Kategoriyalar</a>
+        </div>
+        {% endif %}
+    </nav>
+
+    <main class="flex-grow max-w-7xl mx-auto w-full px-4 sm:px-6 lg:px-8 py-8 sm:py-10">
+        {% block content %}
+        {% endblock %}
+    </main>
+
+    <footer class="bg-white border-t border-slate-200 mt-auto">
+        <div class="max-w-7xl mx-auto px-4 py-8 flex flex-col md:flex-row justify-between items-center gap-4">
+            <div class="flex items-center gap-2">
+                <i class="fas fa-wallet text-indigo-600"></i>
+                <span class="text-lg font-black tracking-tight text-slate-800">Moliya<span class="text-indigo-600">Bot</span></span>
+            </div>
+            <p class="text-sm text-slate-500 font-medium text-center">&copy; 2026 MoliyaBot. Barcha huquqlar himoyalangan.</p>
+            <div class="flex gap-4 text-slate-400">
+                <a href="#" class="hover:text-indigo-600 transition-colors"><i class="fab fa-telegram text-xl"></i></a>
+                <a href="#" class="hover:text-indigo-600 transition-colors"><i class="fab fa-instagram text-xl"></i></a>
+            </div>
+        </div>
+    </footer>
+
+    {% if user.is_authenticated %}
+    <script>
+        document.addEventListener('DOMContentLoaded', function() {
+            // Check for notifications permission
+            if ("Notification" in window) {
+                if (Notification.permission !== "granted" && Notification.permission !== "denied") {
+                    Notification.requestPermission();
+                }
+            }
+
+            // Initialize Flatpickr for 24-hour time inputs globally
+            flatpickr("input[type=time]", {
+                enableTime: true,
+                noCalendar: true,
+                dateFormat: "H:i",
+                time_24hr: true
+            });
+
+            function showToast(title, body) {
+                const container = document.getElementById('toast-container');
+                const toast = document.createElement('div');
+                toast.className = 'bg-white border-l-4 border-indigo-500 shadow-xl rounded-lg p-4 w-72 transform transition-all duration-300 translate-x-full opacity-0 pointer-events-auto flex items-start gap-3';
+                
+                toast.innerHTML = `
+                    <div class="text-indigo-500 mt-0.5"><i class="fas fa-bell"></i></div>
+                    <div>
+                        <h4 class="text-sm font-bold text-slate-800">${title}</h4>
+                        <p class="text-xs text-slate-500 mt-1">${body}</p>
+                    </div>
+                `;
+                
+                container.appendChild(toast);
+                
+                // Animate in
+                setTimeout(() => {
+                    toast.classList.remove('translate-x-full', 'opacity-0');
+                }, 10);
+                
+                // Remove after 5 seconds
+                setTimeout(() => {
+                    toast.classList.add('translate-x-full', 'opacity-0');
+                    setTimeout(() => toast.remove(), 300);
+                }, 5000);
+            }
+
+            function checkUpcomingTasks() {
+                fetch('/planner/api/upcoming-tasks/')
+                    .then(response => response.json())
+                    .then(data => {
+                        const list = document.getElementById('notif-list');
+                        const badge = document.getElementById('notif-badge');
+                        
+                        if (data.tasks && data.tasks.length > 0) {
+                            badge.classList.remove('hidden');
+                            let html = '';
+                            
+                            data.tasks.forEach(task => {
+                                html += `
+                                <div class="px-4 py-3 hover:bg-slate-50 border-b border-slate-50 transition-colors">
+                                    <div class="flex items-start gap-3">
+                                        <div class="mt-1 flex-shrink-0 text-amber-500"><i class="fas fa-clock"></i></div>
+                                        <div>
+                                            <p class="text-sm font-semibold text-slate-800">${task.msgBody || 'Sizning vazifangiz bor'}</p>
+                                            <span class="text-xs font-bold text-amber-600 mt-1 block">${task.start_time}</span>
+                                        </div>
+                                    </div>
+                                </div>`;
+                                
+                                // Prevent multiple notifications populating the toast
+                                const notifKey = 'notified_' + task.id;
+                                if (!localStorage.getItem(notifKey)) {
+                                    const msgTitle = "Diqqat! Vazifa boshlanmoqda";
+                                    // Browser Push Notification
+                                    if ("Notification" in window && Notification.permission === "granted") {
+                                        new Notification(msgTitle, { body: task.msgBody, icon: '/static/icons/wallet.png' });
+                                    }
+                                    // UI Toast Notification
+                                    showToast(msgTitle, task.msgBody);
+                                    
+                                    localStorage.setItem(notifKey, new Date().getTime());
+                                    setTimeout(() => localStorage.removeItem(notifKey), 7200000);
+                                }
+                            });
+                            list.innerHTML = html;
+                        } else {
+                            badge.classList.add('hidden');
+                            list.innerHTML = `<div class="p-4 text-center text-sm text-slate-500 italic">Yangi xabarlar yo'q</div>`;
+                        }
+                    })
+                    .catch(err => console.error('Error fetching notifications:', err));
+            }
+
+            // Run check every minute
+            checkUpcomingTasks();
+            setInterval(checkUpcomingTasks, 30000); // 30 seconds
+        });
+    </script>
+    {% endif %}
+</body>
+</html>

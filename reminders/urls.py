@@ -1,7 +1,8 @@
 from django.urls import path
 from . import views
+app_name = 'reminders'
 
 urlpatterns = [
-    path('reminders/', views.ReminderListCreateView.as_view(), name='reminder-list'),
-    path('reminders/<int:reminder_id>/', views.ReminderDetailView.as_view(), name='reminder-detail'),
+    path('reminders/', views.reminder_list, name='list'),
+    path('reminders/create/', views.reminder_create, name='create'),
 ]

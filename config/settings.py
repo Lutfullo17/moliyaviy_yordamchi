@@ -40,7 +40,7 @@ INSTALLED_APPS = [
     'users',
     'categories',
     'planner',
-    'reminders',
+    'transactions',
     'goals',
 ]
 
@@ -59,7 +59,7 @@ ROOT_URLCONF = 'config.urls'
 TEMPLATES = [
     {
         'BACKEND': 'django.template.backends.django.DjangoTemplates',
-        'DIRS': [],
+        "DIRS": [BASE_DIR / "templates"],
         'APP_DIRS': True,
         'OPTIONS': {
             'context_processors': [
@@ -107,7 +107,7 @@ AUTH_PASSWORD_VALIDATORS = [
 # Internationalization
 # https://docs.djangoproject.com/en/6.0/topics/i18n/
 
-LANGUAGE_CODE = 'en-us'
+LANGUAGE_CODE = 'uz'
 
 TIME_ZONE = 'UTC'
 
@@ -120,3 +120,29 @@ USE_TZ = True
 # https://docs.djangoproject.com/en/6.0/howto/static-files/
 
 STATIC_URL = 'static/'
+
+
+
+AUTH_USER_MODEL = 'users.User'
+
+MEDIA_URL = '/media/'
+MEDIA_ROOT = BASE_DIR / 'media'
+
+
+# settings.py
+
+
+# 2. Lokalizatsiyani o'chirish (o'z formatimizni majburlash uchun)
+USE_L10N = False
+
+# 3. Vaqt formati (24 soatlik: 14:30 ko'rinishida)
+TIME_FORMAT = 'H:i'
+
+# 4. Sana va vaqt birga kelgandagi format
+DATETIME_FORMAT = 'd.m.Y H:i'
+
+# 5. Formalar (Input) qabul qiladigan formatlar ro'yxati
+TIME_INPUT_FORMATS = [
+    '%H:%M',        # 14:30
+    '%H:%M:%S',     # 14:30:59
+]

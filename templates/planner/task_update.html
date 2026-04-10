@@ -1,0 +1,74 @@
+{% extends 'base.html' %}
+
+{% block title %}Vazifani tahrirlash - MoliyaBot{% endblock %}
+
+{% block content %}
+<div class="max-w-2xl mx-auto">
+    <div class="bg-white border border-slate-200 rounded-3xl shadow-sm overflow-hidden">
+        <div class="bg-indigo-600 p-8 text-white flex justify-between items-center">
+            <div>
+                <h1 class="text-2xl font-bold">Vazifani o'zgartirish</h1>
+                <p class="text-indigo-100 text-sm mt-1">Rejadagi o'zgarishlarni kiriting.</p>
+            </div>
+            <a href="{% url 'daily-plan' %}?date={{ task.day_plan.date|date:'Y-m-d' }}" class="bg-white/20 hover:bg-white/30 text-white rounded-full p-2 transition-colors">
+                <i class="fas fa-times"></i>
+            </a>
+        </div>
+
+        <form method="POST" class="p-8 space-y-6">
+            {% csrf_token %}
+            
+            <div>
+                <label class="block text-sm font-semibold text-slate-700 mb-2">Vazifa sarlavhasi</label>
+                <input type="text" name="title" required value="{{ task.title }}"
+                       class="w-full px-4 py-3 rounded-xl border border-slate-200 focus:ring-4 focus:ring-indigo-50 focus:border-indigo-500 outline-none transition-all">
+            </div>
+
+            <div>
+                <label class="block text-sm font-semibold text-slate-700 mb-2">Tavsif (ixtiyoriy)</label>
+                <textarea name="description" rows="3"
+                          class="w-full px-4 py-3 rounded-xl border border-slate-200 focus:ring-4 focus:ring-indigo-50 focus:border-indigo-500 outline-none transition-all">{{ task.description|default:"" }}</textarea>
+            </div>
+
+            <div class="grid grid-cols-2 gap-4">
+                <div>
+                    <label class="block text-sm font-semibold text-slate-700 mb-2">Boshlanish vaqti</label>
+                    <input type="time" name="start_time" step="60" value="{{ task.start_time|time:'H:i' }}"
+                               class="w-full px-4 py-2 border rounded-lg focus:ring-2 focus:ring-indigo-500 outline-none" required>
+                </div>
+                <div>
+                    <label class="block text-sm font-semibold text-slate-700 mb-2">Tugash vaqti</label>
+                    <input type="time" name="end_time" step="60" value="{{ task.end_time|time:'H:i' }}"
+                           class="w-full px-4 py-2 border rounded-lg focus:ring-2 focus:ring-indigo-500 outline-none" required>
+                </div>
+            </div>
+
+            <div class="flex flex-wrap items-center justify-between gap-6">
+                <div class="flex-1 min-w-[200px]">
+                    <label class="block text-sm font-semibold text-slate-700 mb-2">Ustuvorlik (Priority)</label>
+                    <select name="priority" class="w-full px-4 py-3 rounded-xl border border-slate-200 focus:ring-2 focus:ring-indigo-50 outline-none bg-white">
+                        <option value="low" {% if task.priority == 'low' %}selected{% endif %}>Past (Low)</option>
+                        <option value="medium" {% if task.priority == 'medium' %}selected{% endif %}>O'rtacha (Medium)</option>
+                        <option value="high" {% if task.priority == 'high' %}selected{% endif %}>Yuqori (High)</option>
+                    </select>
+                </div>
+
+                <div class="flex items-center gap-3 pt-6">
+                    <input type="checkbox" name="is_important" id="important" {% if task.is_important %}checked{% endif %} class="w-5 h-5 rounded text-indigo-600 focus:ring-indigo-50">
+                    <label for="important" class="text-sm font-semibold text-slate-700 cursor-pointer">Juda muhim vazifa</label>
+                </div>
+            </div>
+
+            <div class="flex gap-4 pt-4">
+                <button type="submit" class="flex-1 bg-indigo-600 hover:bg-indigo-700 text-white font-bold py-3.5 rounded-2xl shadow-lg shadow-indigo-100 transition-all">
+                    Saqlash
+                </button>
+                <a href="{% url 'task-delete' task.id %}" 
+                   class="flex items-center justify-center bg-red-50 hover:bg-red-100 text-red-600 font-bold px-6 py-3.5 rounded-2xl transition-all">
+                    <i class="fas fa-trash-alt mr-2"></i> O'chirish
+                </a>
+            </div>
+        </form>
+    </div>
+</div>
+{% endblock %}

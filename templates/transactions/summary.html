@@ -1,0 +1,39 @@
+{% extends 'base.html' %}
+
+{% block content %}
+<div class="max-w-5xl mx-auto">
+    <h1 class="text-2xl font-bold text-slate-900 mb-8">Moliyaviy Balans</h1>
+
+    <div class="grid grid-cols-1 md:grid-cols-3 gap-6 mb-12">
+        <div class="bg-white border border-slate-200 p-8 rounded-3xl shadow-sm">
+            <div class="text-emerald-500 bg-emerald-50 w-12 h-12 rounded-2xl flex items-center justify-center mb-4 text-xl">
+                <i class="fas fa-arrow-up"></i>
+            </div>
+            <p class="text-sm font-medium text-slate-500 uppercase tracking-wider">Umumiy daromad</p>
+            <p class="text-3xl font-black text-slate-900 mt-1">+{{ total_income }}</p>
+        </div>
+
+        <div class="bg-white border border-slate-200 p-8 rounded-3xl shadow-sm">
+            <div class="text-red-500 bg-red-50 w-12 h-12 rounded-2xl flex items-center justify-center mb-4 text-xl">
+                <i class="fas fa-arrow-down"></i>
+            </div>
+            <p class="text-sm font-medium text-slate-500 uppercase tracking-wider">Umumiy xarajat</p>
+            <p class="text-3xl font-black text-slate-900 mt-1">-{{ total_expense }}</p>
+        </div>
+
+        <div class="{% if balance >= 0 %}bg-blue-600{% else %}bg-slate-900{% endif %} p-8 rounded-3xl shadow-xl text-white">
+            <div class="bg-white/20 w-12 h-12 rounded-2xl flex items-center justify-center mb-4 text-xl text-white">
+                <i class="fas fa-wallet"></i>
+            </div>
+            <p class="text-sm font-medium text-blue-100 uppercase tracking-wider">Hozirgi balans</p>
+            <p class="text-3xl font-black mt-1">{{ balance }}</p>
+        </div>
+    </div>
+    
+    <div class="text-center">
+        <a href="{% url 'transactions:list' %}" class="text-blue-600 font-semibold hover:underline">
+            <i class="fas fa-chevron-left mr-2"></i> Tranzaksiyalar ro'yxatiga qaytish
+        </a>
+    </div>
+</div>
+{% endblock %}
