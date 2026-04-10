@@ -1,0 +1,24 @@
+{% extends 'base.html' %}
+
+{% block content %}
+<div class="max-w-2xl mx-auto mt-10 p-6 bg-white rounded-2xl shadow-lg">
+    <h2 class="text-2xl font-bold text-slate-800 mb-6">Maqsadni tahrirlash</h2>
+    
+    <form method="post" class="space-y-4">
+        {% csrf_token %}
+        
+        <div>
+            {{ form.as_p }}
+        </div>
+
+        <div class="flex gap-4 pt-4">
+            <button type="submit" class="flex-1 bg-indigo-600 hover:bg-indigo-700 text-white font-bold py-3.5 rounded-2xl transition-all">
+                Saqlash
+            </button>
+                <a href="/goals/" class="flex-1 bg-gray-100 hover:bg-gray-200 text-gray-700 font-bold py-3.5 rounded-2xl text-center">
+                    Bekor qilish
+                </a>
+        </div>
+    </form>
+</div>
+{% endblock %}

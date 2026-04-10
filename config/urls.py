@@ -8,11 +8,9 @@ from . import views
 urlpatterns = [
     path('admin/', admin.site.urls),
     
-    # Root redirect
     path('', views.root_redirect, name='root-home'),
     path('dashboard/', views.dashboard_view, name='dashboard'),
 
-    # Ilovalar (Apps)
     path('users/', include('users.urls')),
     path('categories/', include('categories.urls')),
     path('transactions/', include('transactions.urls')),
