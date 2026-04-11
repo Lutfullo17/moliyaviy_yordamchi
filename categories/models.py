@@ -25,6 +25,17 @@ class Category(models.Model):
         auto_now_add=True
     )
 
+    limit_duration = models.IntegerField(
+        null=True,
+        blank=True,
+        help_text="Limit davomiyligi (kunlarda)"
+    )
+
+    limit_set_at = models.DateTimeField(
+        null=True,
+        blank=True
+    )
+
     class Meta:
         ordering = ['name']
         indexes = [

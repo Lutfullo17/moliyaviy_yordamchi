@@ -11,3 +11,6 @@ class User(AbstractUser):
 
     def __str__(self):
         return self.username
+
+    telegram_id = models.BigIntegerField(null=True, blank=True)
+    telegram_code = models.CharField(max_length=10, null=True, blank=True)

@@ -148,3 +148,7 @@ TIME_INPUT_FORMATS = [
     '%H:%M',        # 14:30
     '%H:%M:%S',     # 14:30:59
 ]
+
+LOGIN_URL = 'users:login'
+LOGIN_REDIRECT_URL = 'dashboard'
+LOGOUT_REDIRECT_URL = 'users:login'
