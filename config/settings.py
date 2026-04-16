@@ -75,6 +75,7 @@ TEMPLATES = [
 
 WSGI_APPLICATION = 'config.wsgi.application'
 
+GEMINI_API_KEY = "AIzaSyDxxqXUSF4mustMKSJ0WmPywMKoXGzhnNk"
 
 # Database
 # https://docs.djangoproject.com/en/6.0/ref/settings/#databases
