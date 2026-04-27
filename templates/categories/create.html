@@ -9,12 +9,12 @@
             <h1 class="text-2xl font-bold text-slate-900">
                 {% if category %}Kategoriyani tahrirlash{% else %}Yangi kategoriya qo'shish{% endif %}
             </h1>
-            <p class="text-slate-500 text-sm mt-1">Kategoriya nomini kiriting (masalan: Ovqatlanish, Transport)</p>
+            <p class="text-slate-500 text-sm mt-1">Kategoriya turi va nomini belgilang</p>
         </div>
 
         <form method="POST">
             {% csrf_token %}
-            
+
             {% if error %}
             <div class="mb-6 p-4 bg-red-50 border-l-4 border-red-500 text-red-700 text-sm flex items-center gap-3">
                 <i class="fas fa-exclamation-circle"></i>
@@ -25,36 +25,58 @@
             <div class="space-y-4">
                 <div>
                     <label for="name" class="block text-sm font-medium text-slate-700 mb-1">Kategoriya nomi</label>
-                    <input type="text" name="name" id="name" required 
+                    <input type="text" name="name" id="name" required
                            value="{% if category %}{{ category.name }}{% endif %}"
                            class="w-full px-4 py-3 rounded-xl border border-slate-200 focus:border-blue-500 focus:ring-4 focus:ring-blue-100 outline-none transition-all placeholder:text-slate-400 capitalize"
                            placeholder="Masalan: Uy-joy xarajatlari">
                 </div>
 
-                <div>
-                    <label for="monthly_limit" class="block text-sm font-medium text-slate-700 mb-1">Oylik limit summasi (so'm)</label>
-                    <input type="text" inputmode="numeric" name="monthly_limit" id="monthly_limit"
-                           value="{% if category %}{{ category.monthly_limit|floatformat:0 }}{% else %}{% endif %}"
-                           class="money-input w-full px-4 py-3 rounded-xl border border-slate-200 focus:border-blue-500 focus:ring-4 focus:ring-blue-100 outline-none transition-all placeholder:text-slate-400"
-                           placeholder="Masalan: 2,000,000">
-                    <p class="text-xs text-slate-400 mt-1"><i class="fas fa-info-circle mr-1"></i>Bo'sh qoldirsangiz limit o'rnatilmaydi</p>
+                <div class="mb-4">
+                    <label class="block text-sm font-medium text-slate-700 mb-2">Kategoriya turi</label>
+                    <div class="grid grid-cols-2 gap-3">
+                        <label class="cursor-pointer">
+                            <input type="radio" name="type" value="expense" class="type-radio peer hidden"
+                                   {% if not category or category.type == 'expense' %}checked{% endif %}>
+                            <div class="p-3 text-center rounded-xl border border-slate-200 peer-checked:border-red-500 peer-checked:bg-red-50 peer-checked:text-red-600 transition-all">
+                                <i class="fas fa-arrow-down mr-1"></i> Xarajat
+                            </div>
+                        </label>
+                        <label class="cursor-pointer">
+                            <input type="radio" name="type" value="income" class="type-radio peer hidden"
+                                   {% if category.type == 'income' %}checked{% endif %}>
+                            <div class="p-3 text-center rounded-xl border border-slate-200 peer-checked:border-green-500 peer-checked:bg-green-50 peer-checked:text-green-600 transition-all">
+                                <i class="fas fa-arrow-up mr-1"></i> Daromad
+                            </div>
+                        </label>
+                    </div>
                 </div>
 
-                <div>
-                    <label for="limit_duration" class="block text-sm font-medium text-slate-700 mb-1">Limit muddati</label>
-                    <div class="relative">
-                        <select name="limit_duration" id="limit_duration" 
-                                class="w-full px-4 py-3 rounded-xl border border-slate-200 focus:border-blue-500 focus:ring-4 focus:ring-blue-100 outline-none appearance-none transition-all bg-white">
-                            <option value="" {% if not category.limit_duration %}selected{% endif %}>Doimiy (Oylik)</option>
-                            <option value="1" {% if category.limit_duration == 1 %}selected{% endif %}>1 kun</option>
-                            <option value="15" {% if category.limit_duration == 15 %}selected{% endif %}>15 kun</option>
-                            <option value="30" {% if category.limit_duration == 30 %}selected{% endif %}>30 kun</option>
-                        </select>
-                        <div class="absolute right-4 top-1/2 -translate-y-1/2 pointer-events-none text-slate-400">
-                            <i class="fas fa-chevron-down text-xs"></i>
-                        </div>
+                <div id="limit_wrapper" class="space-y-4 {% if category.type == 'income' %}hidden{% endif %}">
+                    <div>
+                        <label for="monthly_limit" class="block text-sm font-medium text-slate-700 mb-1">Oylik limit summasi (so'm)</label>
+                        <input type="text" inputmode="numeric" name="monthly_limit" id="monthly_limit"
+                               value="{% if category %}{{ category.monthly_limit|floatformat:0 }}{% endif %}"
+                               class="money-input w-full px-4 py-3 rounded-xl border border-slate-200 focus:border-blue-500 focus:ring-4 focus:ring-blue-100 outline-none transition-all placeholder:text-slate-400"
+                               placeholder="Masalan: 2,000,000">
+                        <p class="text-xs text-slate-400 mt-1"><i class="fas fa-info-circle mr-1"></i>Bo'sh qoldirsangiz limit o'rnatilmaydi</p>
                     </div>
-                    <p class="text-xs text-slate-400 mt-1"><i class="fas fa-clock mr-1"></i>Muddat tugagach, ushbu limit "Svetofor"dan olib tashlanadi</p>
+
+                    <div>
+                        <label for="limit_duration" class="block text-sm font-medium text-slate-700 mb-1">Limit muddati</label>
+                        <div class="relative">
+                            <select name="limit_duration" id="limit_duration"
+                                    class="w-full px-4 py-3 rounded-xl border border-slate-200 focus:border-blue-500 focus:ring-4 focus:ring-blue-100 outline-none appearance-none transition-all bg-white">
+                                <option value="" {% if not category.limit_duration %}selected{% endif %}>Doimiy (Oylik)</option>
+                                <option value="1" {% if category.limit_duration == 1 %}selected{% endif %}>1 kun</option>
+                                <option value="15" {% if category.limit_duration == 15 %}selected{% endif %}>15 kun</option>
+                                <option value="30" {% if category.limit_duration == 30 %}selected{% endif %}>30 kun</option>
+                            </select>
+                            <div class="absolute right-4 top-1/2 -translate-y-1/2 pointer-events-none text-slate-400">
+                                <i class="fas fa-chevron-down text-xs"></i>
+                            </div>
+                        </div>
+                        <p class="text-xs text-slate-400 mt-1"><i class="fas fa-clock mr-1"></i>Muddat tugagach, ushbu limit "Svetofor"dan olib tashlanadi</p>
+                    </div>
                 </div>
 
                 <div class="flex items-center gap-3 pt-4">
@@ -69,4 +91,24 @@
         </form>
     </div>
 </div>
+
+<script>
+    document.addEventListener('DOMContentLoaded', function() {
+        const typeRadios = document.querySelectorAll('.type-radio');
+        const limitWrapper = document.getElementById('limit_wrapper');
+
+        typeRadios.forEach(radio => {
+            radio.addEventListener('change', function() {
+                if (this.value === 'income') {
+                    // Daromad tanlansa yashirish (Tailwind 'hidden' klasidan foydalanamiz)
+                    limitWrapper.classList.add('hidden');
+                    document.getElementById('monthly_limit').value = '';
+                } else {
+                    // Xarajat tanlansa ko'rsatish
+                    limitWrapper.classList.remove('hidden');
+                }
+            });
+        });
+    });
+</script>
 {% endblock %}

@@ -1,78 +1,24 @@
+import csv
+import json
+from decimal import Decimal, InvalidOperation
+
 from django.shortcuts import render, redirect, get_object_or_404
-from django.utils.dateparse import parse_date
-from .forms import TransactionForm
-import uuid
-import calendar
 from django.contrib.auth.decorators import login_required
-from django.db.models import Sum
+from django.utils.dateparse import parse_date
 from django.utils import timezone
-from transactions.models import Transaction
+from django.db.models import Sum
+from django.http import HttpResponse, JsonResponse
+from django.views.decorators.http import require_POST
+
+from .forms import TransactionForm
+from .models import Transaction
 from categories.models import Category
 
 
-@login_required
-def dashboard_view(request):
-    today = timezone.now()
-    current_month = today.month
-    current_year = today.year
+def _user_categories(user):
+    return Category.objects.filter(user=user) | Category.objects.filter(is_default=True)
 
 
-    user = request.user
-
-    if not user.telegram_code:
-        user.telegram_code = str(uuid.uuid4())[:8]
-        user.save()
-
-    bot_username = "moliyaYordam_bot"
-    bot_url = f"https://t.me/{bot_username}?start={user.telegram_code}"
-
-    # --- Svetofor Tizimi ---
-    categories = Category.objects.filter(user=user) | Category.objects.filter(is_default=True)
-    budget_data = []
-    for cat in categories:
-        spent = Transaction.objects.filter(
-            category=cat, type='expense',
-            date__month=current_month, date__year=current_year, user=user
-        ).aggregate(Sum('amount'))['amount__sum'] or 0
-
-        limit = cat.monthly_limit
-        percent = (spent / limit * 100) if limit > 0 else 0
-        color = "bg-green-500"
-        if percent >= 100:
-            color = "bg-red-600"
-        elif percent >= 80:
-            color = "bg-yellow-500"
-
-        budget_data.append({
-            'category': cat.name, 'spent': spent, 'limit': limit,
-            'percent': min(percent, 100), 'color': color
-        })
-
-    # --- AQLLI BASHORAT ---
-    total_monthly_expense = Transaction.objects.filter(
-        user=user, type='expense',
-        date__month=current_month, date__year=current_year
-    ).aggregate(Sum('amount'))['amount__sum'] or 0
-
-    days_passed = today.day
-    daily_average = total_monthly_expense / days_passed if days_passed > 0 else 0
-    last_day = calendar.monthrange(current_year, current_month)[1]
-    days_left = last_day - days_passed
-    remaining_forecast = daily_average * days_left
-
-    context = {
-        'bot_url': bot_url,
-        'budget_data': budget_data,
-        'forecast': {
-            'daily_average': daily_average,
-            'forecast_total': total_monthly_expense + remaining_forecast,
-            'days_left': days_left,
-            'remaining_forecast': remaining_forecast,
-        }
-    }
-    return render(request, 'dashboard.html', context)
-
-# TRANSACTIONS LIST
 @login_required
 def transaction_list(request):
     transactions = Transaction.objects.filter(user=request.user)
@@ -87,19 +33,34 @@ def transaction_list(request):
     if category:
         transactions = transactions.filter(category_id=category)
 
-    categories = Category.objects.filter(user=request.user) | Category.objects.filter(is_default=True)
+    t_type = request.GET.get('type')
+    if t_type in ('income', 'expense'):
+        transactions = transactions.filter(type=t_type)
+
+    transactions = transactions.order_by('-date', '-created_at')
+
+    total_income = transactions.filter(type='income').aggregate(Sum('amount'))['amount__sum'] or 0
+    total_expense = transactions.filter(type='expense').aggregate(Sum('amount'))['amount__sum'] or 0
 
     context = {
-        'transactions': transactions.order_by('-date'),
-        'categories': categories
+        'transactions': transactions,
+        'categories': _user_categories(request.user),
+        'total_income': total_income,
+        'total_expense': total_expense,
+        'balance': total_income - total_expense,
     }
-    return render(request, 'transactions/list.html', context)
+    return render(request, 'transactions/summary.html', context)
 
 
-# CREATE TRANSACTION
+# Backwards-compatible alias
+transaction_summary = transaction_list
+
+
 @login_required
 def transaction_create(request):
-    categories = Category.objects.filter(user=request.user) | Category.objects.filter(is_default=True)
+    all_categories = _user_categories(request.user)
+    income_categories = all_categories.filter(type='income')
+    expense_categories = all_categories.filter(type='expense')
 
     if request.method == 'POST':
         form = TransactionForm(request.POST)
@@ -113,15 +74,15 @@ def transaction_create(request):
 
     return render(request, 'transactions/create.html', {
         'form': form,
-        'categories': categories
+        'income_categories': income_categories,
+        'expense_categories': expense_categories,
     })
 
 
-# UPDATE TRANSACTION
 @login_required
 def transaction_update(request, pk):
     transaction = get_object_or_404(Transaction, pk=pk, user=request.user)
-    categories = Category.objects.filter(user=request.user) | Category.objects.filter(is_default=True)
+    categories = _user_categories(request.user)
 
     if request.method == 'POST':
         form = TransactionForm(request.POST, instance=transaction)
@@ -134,11 +95,10 @@ def transaction_update(request, pk):
     return render(request, 'transactions/update.html', {
         'form': form,
         'transaction': transaction,
-        'categories': categories
+        'categories': categories,
     })
 
 
-# DELETE TRANSACTION
 @login_required
 def transaction_delete(request, pk):
     transaction = get_object_or_404(Transaction, pk=pk, user=request.user)
@@ -151,30 +111,112 @@ def transaction_delete(request, pk):
     })
 
 
-# TRANSACTION SUMMARY
 @login_required
-def transaction_summary(request):
-    transactions = Transaction.objects.filter(user=request.user)
-    total_income = transactions.filter(type='income').aggregate(Sum('amount'))['amount__sum'] or 0
-    total_expense = transactions.filter(type='expense').aggregate(Sum('amount'))['amount__sum'] or 0
+def transaction_export_csv(request):
+    response = HttpResponse(content_type='text/csv; charset=utf-8-sig')
+    today = timezone.now().date().isoformat()
+    response['Content-Disposition'] = f'attachment; filename="transactions_{today}.csv"'
 
-    context = {
-        'total_income': total_income,
-        'total_expense': total_expense,
-        'balance': total_income - total_expense
-    }
-    return render(request, 'transactions/summary.html', context)
+    writer = csv.writer(response)
+    writer.writerow(['Sana', 'Turi', 'Kategoriya', 'Summa', 'Izoh'])
+
+    qs = Transaction.objects.filter(user=request.user).order_by('-date', '-created_at')
+    for t in qs:
+        writer.writerow([
+            t.date.strftime('%d.%m.%Y'),
+            'Daromad' if t.type == 'income' else 'Xarajat',
+            t.category.name if t.category else '',
+            t.amount,
+            t.note or '',
+        ])
+    return response
 
 
-# VALYUTA BILAN ISHLASH (Agar kerak bo'lsa)
-from .utils import get_uzs_rate
+@login_required
+def category_breakdown_api(request):
+    today = timezone.now()
+    qs = Transaction.objects.filter(
+        user=request.user,
+        type='expense',
+        date__month=today.month,
+        date__year=today.year,
+    ).values('category__name').annotate(total=Sum('amount')).order_by('-total')
+
+    data = [
+        {
+            'category': row['category__name'] or 'Kategoriyasiz',
+            'total': float(row['total'] or 0),
+        }
+        for row in qs
+    ]
+    return JsonResponse({'items': data})
 
 
-def transaction_create1(request):
-    if request.method == 'POST':
-        amount = float(request.POST.get('amount'))
-        currency = request.POST.get('currency')
-        final_amount = amount
-        if currency == 'USD':
-            rate = get_uzs_rate()
-            final_amount = amount * rate
+@login_required
+@require_POST
+def voice_parse(request):
+    """Parse free-text Uzbek transaction description into structured data."""
+    try:
+        body = json.loads(request.body.decode('utf-8'))
+    except (ValueError, UnicodeDecodeError):
+        return JsonResponse({'error': 'Noto\'g\'ri so\'rov'}, status=400)
+
+    transcript = (body.get('transcript') or '').strip()
+    if not transcript:
+        return JsonResponse({'error': 'Bo\'sh matn'}, status=400)
+
+    from .voice_parser import parse_transaction_text
+    parsed = parse_transaction_text(transcript, request.user)
+
+    if not parsed:
+        return JsonResponse({'error': 'Tushunilmadi. Iltimos qayta urinib ko\'ring.'}, status=422)
+
+    return JsonResponse({
+        'transcript': transcript,
+        'amount': float(parsed['amount']),
+        'type': parsed['type'],
+        'category_id': parsed.get('category_id'),
+        'category_name': parsed.get('category_name'),
+        'note': parsed.get('note', ''),
+    })
+
+
+@login_required
+@require_POST
+def voice_create(request):
+    """Save a transaction parsed from voice/text."""
+    try:
+        body = json.loads(request.body.decode('utf-8'))
+    except (ValueError, UnicodeDecodeError):
+        return JsonResponse({'error': 'Noto\'g\'ri so\'rov'}, status=400)
+
+    try:
+        amount = Decimal(str(body.get('amount', '0')))
+    except (InvalidOperation, ValueError):
+        return JsonResponse({'error': 'Summa noto\'g\'ri'}, status=400)
+    if amount <= 0:
+        return JsonResponse({'error': 'Summa 0 dan katta bo\'lishi kerak'}, status=400)
+
+    t_type = body.get('type')
+    if t_type not in ('income', 'expense'):
+        return JsonResponse({'error': 'Tur noto\'g\'ri'}, status=400)
+
+    note = (body.get('note') or '').strip()[:255]
+    category_id = body.get('category_id')
+    category = None
+    if category_id:
+        category = Category.objects.filter(
+            id=category_id
+        ).filter(
+            user=request.user
+        ).first() or Category.objects.filter(id=category_id, is_default=True).first()
+
+    Transaction.objects.create(
+        user=request.user,
+        amount=amount,
+        type=t_type,
+        category=category,
+        note=note,
+        date=timezone.now().date(),
+    )
+    return JsonResponse({'ok': True})

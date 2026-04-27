@@ -3,6 +3,8 @@
 {% block title %}{% if goal %}Tahrirlash{% else %}Yangi Maqsad{% endif %}{% endblock %}
 
 {% block content %}
+<link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/flatpickr/dist/flatpickr.min.css">
+<script src="https://cdn.jsdelivr.net/npm/flatpickr"></script>
 <div class="max-w-2xl mx-auto">
     <div class="bg-white border border-slate-200 rounded-3xl shadow-sm overflow-hidden">
         <div class="bg-emerald-600 p-6">
@@ -14,6 +16,22 @@
 
         <form method="POST" class="p-8 space-y-5">
             {% csrf_token %}
+
+            {% if form.errors %}
+            <div class="p-4 bg-red-50 border-l-4 border-red-500 text-red-700 text-sm space-y-1 rounded-r-xl mb-6">
+                <div class="flex items-center gap-2 font-bold mb-1">
+                    <i class="fas fa-exclamation-circle text-red-500"></i>
+                    Xatolik yuz berdi:
+                </div>
+                <ul class="list-disc list-inside text-xs">
+                    {% for field, errors in form.errors.items %}
+                        {% for error in errors %}
+                            <li>{{ field|capfirst }}: {{ error }}</li>
+                        {% endfor %}
+                    {% endfor %}
+                </ul>
+            </div>
+            {% endif %}
             
             <div>
                 <label class="block text-sm font-semibold text-slate-700 mb-2">Maqsad nomi</label>
@@ -42,13 +60,17 @@
                 </div>
             </div>
 
-           <div>
-                <label class="block text-sm font-semibold text-slate-700 mb-2">Maqsadga erishish muddati</label>
-                <input type="date"
-                       name="deadline"
-                       value="{{ form.deadline.value|date:'Y-m-d'|default:'' }}"
-                       required
-                       class="w-full px-4 py-3 rounded-xl border border-slate-200 focus:ring-4 focus:ring-emerald-100 focus:border-emerald-500 outline-none transition-all">
+            <div class="relative">
+                <label class="block text-sm font-semibold text-slate-700 mb-2">Sana</label>
+                <div class="relative">
+                    <input type="text" name="deadline" id="date_picker"
+                           required
+                           placeholder="Sana tanlang..."
+                           class="w-full px-4 py-3 rounded-xl border border-slate-200 focus:ring-2 focus:ring-blue-50 outline-none bg-white pr-10">
+                    <div class="absolute right-3 top-1/2 -translate-y-1/2 text-slate-400 pointer-events-none">
+                        <i class="fas fa-calendar-alt"></i>
+                    </div>
+                </div>
             </div>
 
             <div class="flex items-center gap-4 pt-6">
@@ -62,4 +84,20 @@
         </form>
     </div>
 </div>
+
+<script>
+    document.addEventListener('DOMContentLoaded', function() {
+        flatpickr("#date_picker", {
+            dateFormat: "d/m/Y", // Qat'iy format: Kun/Oy/Yil
+            defaultDate: "today", // Standart holatda bugungi sana
+            locale: {
+                firstDayOfWeek: 1 // Haftani dushanbadan boshlash
+            },
+            // Agar tahrirlash bo'lsa, eski sanani yuklash uchun:
+            {% if form.deadline.value %}
+            defaultDate: "{{ form.deadline.value|date:'d/m/Y' }}",
+            {% endif %}
+        });
+    });
+</script>
 {% endblock %}

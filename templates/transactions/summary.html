@@ -1,39 +1,205 @@
 {% extends 'base.html' %}
 
-{% block content %}
-<div class="max-w-5xl mx-auto">
-    <h1 class="text-2xl font-bold text-slate-900 mb-8">Moliyaviy Balans</h1>
+{% block title %}Moliyaviy Hisobot - MoliyaBot{% endblock %}
 
-    <div class="grid grid-cols-1 md:grid-cols-3 gap-6 mb-12">
-        <div class="bg-white border border-slate-200 p-8 rounded-3xl shadow-sm">
-            <div class="text-emerald-500 bg-emerald-50 w-12 h-12 rounded-2xl flex items-center justify-center mb-4 text-xl">
+{% block content %}
+<div class="max-w-6xl mx-auto space-y-8">
+
+    <div class="grid grid-cols-1 md:grid-cols-3 gap-6">
+        <div class="bg-white border border-slate-200 p-6 rounded-3xl shadow-sm flex items-center gap-4">
+            <div class="text-emerald-500 bg-emerald-50 w-12 h-12 rounded-2xl flex items-center justify-center text-xl shrink-0">
                 <i class="fas fa-arrow-up"></i>
             </div>
-            <p class="text-sm font-medium text-slate-500 uppercase tracking-wider">Umumiy daromad</p>
-            <p class="text-3xl font-black text-slate-900 mt-1">+{{ total_income }}</p>
+            <div>
+                <p class="text-xs font-medium text-slate-500 uppercase tracking-wider">Umumiy daromad</p>
+                <p class="text-xl font-black text-slate-900">+{{ total_income|default:"0" }} <span class="text-sm font-normal text-slate-400">so'm</span></p>
+            </div>
         </div>
 
-        <div class="bg-white border border-slate-200 p-8 rounded-3xl shadow-sm">
-            <div class="text-red-500 bg-red-50 w-12 h-12 rounded-2xl flex items-center justify-center mb-4 text-xl">
+        <div class="bg-white border border-slate-200 p-6 rounded-3xl shadow-sm flex items-center gap-4">
+            <div class="text-red-500 bg-red-50 w-12 h-12 rounded-2xl flex items-center justify-center text-xl shrink-0">
                 <i class="fas fa-arrow-down"></i>
             </div>
-            <p class="text-sm font-medium text-slate-500 uppercase tracking-wider">Umumiy xarajat</p>
-            <p class="text-3xl font-black text-slate-900 mt-1">-{{ total_expense }}</p>
+            <div>
+                <p class="text-xs font-medium text-slate-500 uppercase tracking-wider">Umumiy xarajat</p>
+                <p class="text-xl font-black text-slate-900">-{{ total_expense|default:"0" }} <span class="text-sm font-normal text-slate-400">so'm</span></p>
+            </div>
         </div>
 
-        <div class="{% if balance >= 0 %}bg-blue-600{% else %}bg-slate-900{% endif %} p-8 rounded-3xl shadow-xl text-white">
-            <div class="bg-white/20 w-12 h-12 rounded-2xl flex items-center justify-center mb-4 text-xl text-white">
+        <div class="{% if balance >= 0 %}bg-blue-600 shadow-blue-100{% else %}bg-rose-600 shadow-rose-100{% endif %} p-6 rounded-3xl shadow-xl text-white flex items-center gap-4">
+            <div class="bg-white/20 w-12 h-12 rounded-2xl flex items-center justify-center text-xl shrink-0">
                 <i class="fas fa-wallet"></i>
             </div>
-            <p class="text-sm font-medium text-blue-100 uppercase tracking-wider">Hozirgi balans</p>
-            <p class="text-3xl font-black mt-1">{{ balance }}</p>
+            <div>
+                <p class="text-xs font-medium text-blue-50 uppercase tracking-wider opacity-80">Hozirgi balans</p>
+                <p class="text-xl font-black">{{ balance|default:"0" }} <span class="text-sm font-normal opacity-70">so'm</span></p>
+            </div>
         </div>
     </div>
-    
-    <div class="text-center">
-        <a href="{% url 'transactions:list' %}" class="text-blue-600 font-semibold hover:underline">
-            <i class="fas fa-chevron-left mr-2"></i> Tranzaksiyalar ro'yxatiga qaytish
-        </a>
+
+    <div class="flex flex-col md:flex-row md:items-center justify-between gap-4">
+        <div>
+            <h1 class="text-2xl font-bold text-slate-900">Tranzaksiyalar tarixi</h1>
+            <p class="text-slate-500 text-sm">Barcha amallarni boshqarish va filtrlash.</p>
+        </div>
+        <div class="flex gap-3">
+            <a href="{% url 'transactions:export_csv' %}" class="inline-flex items-center px-5 py-3 bg-emerald-600 text-white font-bold rounded-2xl hover:bg-emerald-700 shadow-lg shadow-emerald-100 transition-all">
+                <i class="fas fa-file-csv mr-2"></i> CSV
+            </a>
+            <a href="{% url 'transactions:create' %}" class="inline-flex items-center px-6 py-3 bg-blue-600 text-white font-bold rounded-2xl hover:bg-blue-700 shadow-lg shadow-blue-100 transition-all">
+                <i class="fas fa-plus mr-2"></i> Yangi qo'shish
+            </a>
+        </div>
+    </div>
+
+    <!-- Category Spending Chart -->
+    <div class="bg-white border border-slate-200 rounded-3xl shadow-sm p-6">
+        <div class="flex items-center justify-between mb-4">
+            <div>
+                <h2 class="text-lg font-bold text-slate-900">Kategoriyalar bo'yicha xarajat (joriy oy)</h2>
+                <p class="text-xs text-slate-500">Eng ko'p sarflanadigan yo'nalishlar</p>
+            </div>
+            <i class="fas fa-chart-pie text-2xl text-slate-300"></i>
+        </div>
+        <div class="relative" style="height: 280px;">
+            <canvas id="categoryChart"></canvas>
+        </div>
+        <div id="categoryChartEmpty" class="hidden text-center py-8 text-slate-400 text-sm font-medium">
+            Bu oyda hali xarajat yo'q.
+        </div>
+    </div>
+
+    <div class="bg-white border border-slate-200 rounded-3xl p-4 shadow-sm">
+        <form method="GET" class="flex flex-wrap md:flex-nowrap gap-4">
+            <div class="flex-1 min-w-[200px]">
+                <input type="date" name="date" value="{{ request.GET.date }}"
+                       class="w-full px-4 py-2.5 rounded-xl border border-slate-100 bg-slate-50 text-sm focus:ring-4 focus:ring-blue-50 outline-none transition-all">
+            </div>
+            <div class="flex-1 min-w-[200px]">
+                <select name="category" class="w-full px-4 py-2.5 rounded-xl border border-slate-100 bg-slate-50 text-sm focus:ring-4 focus:ring-blue-50 outline-none transition-all">
+                    <option value="">Barcha kategoriyalar</option>
+                    {% for cat in categories %}
+                        <option value="{{ cat.id }}" {% if request.GET.category == cat.id|stringformat:"i" %}selected{% endif %}>{{ cat.name|capfirst }}</option>
+                    {% endfor %}
+                </select>
+            </div>
+            <button type="submit" class="px-8 py-2.5 bg-slate-900 text-white rounded-xl text-sm font-bold hover:bg-slate-800 transition-all shrink-0">
+                <i class="fas fa-filter mr-2"></i> Filtrlash
+            </button>
+            {% if request.GET.date or request.GET.category %}
+                <a href="{% url 'transactions:list' %}" class="px-4 py-2.5 bg-slate-100 text-slate-500 rounded-xl text-sm font-bold hover:bg-slate-200 transition-all">
+                    X
+                </a>
+            {% endif %}
+        </form>
+    </div>
+
+    <div class="bg-white border border-slate-200 rounded-3xl shadow-sm overflow-hidden">
+        <div class="overflow-x-auto">
+            <table class="w-full text-left border-collapse">
+                <thead>
+                    <tr class="bg-slate-50/50 border-b border-slate-100">
+                        <th class="px-6 py-4 text-xs uppercase tracking-wider font-bold text-slate-400">Sana</th>
+                        <th class="px-6 py-4 text-xs uppercase tracking-wider font-bold text-slate-400">Kategoriya va Izoh</th>
+                        <th class="px-6 py-4 text-xs uppercase tracking-wider font-bold text-slate-400">Summa</th>
+                        <th class="px-6 py-4 text-xs uppercase tracking-wider font-bold text-slate-400 text-right">Boshqarish</th>
+                    </tr>
+                </thead>
+                <tbody class="divide-y divide-slate-50">
+                    {% for trans in transactions %}
+                    <tr class="hover:bg-blue-50/30 transition-colors group">
+                        <td class="px-6 py-5 whitespace-nowrap">
+                            <span class="text-sm font-semibold text-slate-600">{{ trans.date|date:"d.m.Y" }}</span>
+                        </td>
+                        <td class="px-6 py-5">
+                            <div class="flex flex-col">
+                                <span class="text-sm font-bold text-slate-900 capitalize">{{ trans.category.name|default:"Kategoriyasiz" }}</span>
+                                {% if trans.note %}
+                                    <span class="text-xs text-slate-400 italic mt-0.5">{{ trans.note }}</span>
+                                {% endif %}
+                            </div>
+                        </td>
+                        <td class="px-6 py-5 whitespace-nowrap">
+                            <div class="inline-flex items-center px-3 py-1 rounded-full text-sm font-black {% if trans.type == 'income' %}bg-emerald-50 text-emerald-600{% else %}bg-rose-50 text-rose-500{% endif %}">
+                                {% if trans.type == 'income' %}+{% else %}-{% endif %}{{ trans.amount|floatformat:0 }}
+                            </div>
+                        </td>
+                        <td class="px-6 py-5 text-right whitespace-nowrap">
+                            <div class="flex justify-end gap-2 opacity-0 group-hover:opacity-100 transition-opacity">
+                                <a href="{% url 'transactions:update' trans.pk %}" class="p-2 text-slate-400 hover:text-blue-600 hover:bg-blue-50 rounded-lg transition-all">
+                                    <i class="fas fa-edit"></i>
+                                </a>
+                                <a href="{% url 'transactions:delete' trans.pk %}" class="p-2 text-slate-400 hover:text-rose-600 hover:bg-rose-50 rounded-lg transition-all">
+                                    <i class="fas fa-trash"></i>
+                                </a>
+                            </div>
+                        </td>
+                    </tr>
+                    {% empty %}
+                    <tr>
+                        <td colspan="4" class="px-6 py-20 text-center">
+                            <div class="flex flex-col items-center">
+                                <div class="w-16 h-16 bg-slate-50 rounded-full flex items-center justify-center text-slate-200 text-2xl mb-4">
+                                    <i class="fas fa-receipt"></i>
+                                </div>
+                                <p class="text-slate-400 font-medium">Hozircha tranzaksiyalar mavjud emas.</p>
+                            </div>
+                        </td>
+                    </tr>
+                    {% endfor %}
+                </tbody>
+            </table>
+        </div>
     </div>
 </div>
+
+<script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
+<script>
+document.addEventListener('DOMContentLoaded', function () {
+    fetch("{% url 'transactions:api_category_breakdown' %}")
+        .then(r => r.json())
+        .then(payload => {
+            const items = payload.items || [];
+            const canvas = document.getElementById('categoryChart');
+            const empty = document.getElementById('categoryChartEmpty');
+            if (!items.length) {
+                canvas.parentElement.classList.add('hidden');
+                empty.classList.remove('hidden');
+                return;
+            }
+            const labels = items.map(i => i.category);
+            const data = items.map(i => i.total);
+            const palette = ['#6366f1', '#8b5cf6', '#ec4899', '#f97316', '#10b981', '#06b6d4', '#facc15', '#f43f5e', '#64748b', '#22d3ee'];
+            new Chart(canvas.getContext('2d'), {
+                type: 'doughnut',
+                data: {
+                    labels,
+                    datasets: [{
+                        data,
+                        backgroundColor: labels.map((_, i) => palette[i % palette.length]),
+                        borderWidth: 2,
+                        borderColor: '#ffffff',
+                    }],
+                },
+                options: {
+                    responsive: true,
+                    maintainAspectRatio: false,
+                    plugins: {
+                        legend: { position: 'right', labels: { font: { size: 12 }, boxWidth: 12 } },
+                        tooltip: {
+                            callbacks: {
+                                label: ctx => ctx.label + ': ' + Math.round(ctx.parsed).toLocaleString('en-US') + ' UZS'
+                            }
+                        }
+                    },
+                    cutout: '55%',
+                }
+            });
+        })
+        .catch(() => {
+            document.getElementById('categoryChart').parentElement.classList.add('hidden');
+            document.getElementById('categoryChartEmpty').classList.remove('hidden');
+        });
+});
+</script>
 {% endblock %}

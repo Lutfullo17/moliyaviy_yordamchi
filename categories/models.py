@@ -8,7 +8,11 @@ class Category(models.Model):
         max_length=100
     )
     monthly_limit = models.DecimalField(max_digits=12, decimal_places=2, default=0)
-
+    CATEGORY_TYPES = (
+        ('expense', 'Xarajat'),
+        ('income', 'Daromad'),
+    )
+    type = models.CharField(max_length=10, choices=CATEGORY_TYPES, default='expense')
     user = models.ForeignKey(
         settings.AUTH_USER_MODEL,
         on_delete=models.CASCADE,

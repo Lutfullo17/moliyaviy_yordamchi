@@ -1,7 +1,6 @@
 from django.shortcuts import render, redirect, get_object_or_404
 from django.contrib.auth.decorators import login_required
-from django.utils.dateparse import parse_datetime
-
+from .forms import ReminderForm
 from .models import Reminder
 
 
@@ -14,20 +13,29 @@ def reminder_list(request):
 @login_required
 def reminder_create(request):
     if request.method == 'POST':
-        remind_time_str = request.POST.get('remind_time')
-        remind_time = parse_datetime(remind_time_str)
+        form = ReminderForm(request.POST)
+        if form.is_valid():
+            reminder = form.save(commit=False)
+            reminder.user = request.user
+            reminder.save()
+            return redirect('reminders:list')
+    else:
+        form = ReminderForm()
 
-        if not remind_time:
-            return render(request, 'reminders/create.html', {
-                'error': 'Sana noto‘g‘ri formatda'
-            })
+    return render(request, 'reminders/create.html', {'form': form})
 
-        Reminder.objects.create(
-            user=request.user,
-            title=request.POST.get('title'),
-            description=request.POST.get('description'),
-            remind_time=remind_time
-        )
-        return redirect('reminders:list')
 
-    return render(request, 'reminders/create.html')
+@login_required
+def reminder_toggle(request, pk):
+    reminder = get_object_or_404(Reminder, pk=pk, user=request.user)
+    reminder.is_done = not reminder.is_done
+    reminder.save()
+    return redirect('reminders:list')
+
+
+@login_required
+def reminder_delete(request, pk):
+    reminder = get_object_or_404(Reminder, pk=pk, user=request.user)
+    if request.method == 'POST':
+        reminder.delete()
+    return redirect('reminders:list')

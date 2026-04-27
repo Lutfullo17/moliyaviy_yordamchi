@@ -20,30 +20,40 @@ def category_list(request):
 def category_create(request):
     if request.method == 'POST':
         name = request.POST.get('name')
+        category_type = request.POST.get('type')  # 'expense' yoki 'income'
         limit = request.POST.get('monthly_limit', '0')
         limit_duration = request.POST.get('limit_duration')
 
+        # 1. Ism bo'sh emasligini tekshirish
         if not name or not name.strip():
             return render(request, 'categories/create.html', {
-                'error': 'Name cannot be empty'
+                'error': 'Kategoriya nomi kiritilishi shart!'
             })
 
-        try:
-            raw_limit = str(limit).replace(',', '').strip()
-            monthly_limit = float(raw_limit) if raw_limit else 0
-        except ValueError:
+        # 2. Mantiqiy tekshiruv: Agar daromad bo'lsa, limitni bekor qilamiz
+        if category_type == 'income':
             monthly_limit = 0
-
-        try:
-            limit_duration = int(limit_duration) if limit_duration else None
-        except ValueError:
             limit_duration = None
+        else:
+            # Xarajat bo'lsa, limitni raqamga o'giramiz
+            try:
+                raw_limit = str(limit).replace(',', '').strip()
+                monthly_limit = float(raw_limit) if raw_limit else 0
+            except ValueError:
+                monthly_limit = 0
 
+            try:
+                limit_duration = int(limit_duration) if limit_duration else None
+            except ValueError:
+                limit_duration = None
+
+        # 3. Bazaga saqlash
         Category.objects.create(
             name=name,
+            type=category_type,  # Yangi maydon
             monthly_limit=monthly_limit,
             limit_duration=limit_duration,
-            limit_set_at=timezone.now() if monthly_limit > 0 else None,
+            limit_set_at=timezone.now() if (category_type == 'expense' and monthly_limit > 0) else None,
             user=request.user,
             is_default=False
         )
@@ -51,7 +61,6 @@ def category_create(request):
         return redirect('categories:list')
 
     return render(request, 'categories/create.html')
-
 
 @login_required
 def category_update(request, pk):

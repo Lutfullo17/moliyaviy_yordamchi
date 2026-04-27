@@ -25,7 +25,7 @@ SECRET_KEY = 'django-insecure-mj2s(stc(&35@$pq=%v1_+n#lmbgja-2t+5=vqja)c!#9qj44q
 # SECURITY WARNING: don't run with debug turned on in production!
 DEBUG = True
 
-ALLOWED_HOSTS = []
+ALLOWED_HOSTS = ['*']
 
 
 # Application definition
@@ -42,9 +42,13 @@ INSTALLED_APPS = [
     'planner',
     'transactions',
     'goals',
+    'reminders',
 ]
 
+OPENROUTER_API_KEY = "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"
 CURRENCY_API_KEY = '8030951ae8aec0d043179270'
+TELEGRAM_BOT_TOKEN = '8743342641:AAEQaqxqGyBxU-4jvfyVwks0XjiL2JALmhQ'
+TELEGRAM_BOT_USERNAME = 'moliyaYordam_bot'
 
 MIDDLEWARE = [
     'django.middleware.security.SecurityMiddleware',
@@ -142,6 +146,7 @@ USE_L10N = False
 TIME_FORMAT = 'H:i'
 
 # 4. Sana va vaqt birga kelgandagi format
+DATE_FORMAT = 'd.m.Y'
 DATETIME_FORMAT = 'd.m.Y H:i'
 
 # 5. Formalar (Input) qabul qiladigan formatlar ro'yxati
@@ -150,6 +155,22 @@ TIME_INPUT_FORMATS = [
     '%H:%M:%S',     # 14:30:59
 ]
 
+DATE_INPUT_FORMATS = [
+    '%d/%m/%Y',     # 17/04/2026
+    '%d.%m.%Y',     # 17.04.2026
+    '%Y-%m-%d',     # 2026-04-17
+    '%m/%d/%Y',     # 04/17/2026
+    '%m/%d/%y',     # 04/17/26
+]
+
+DATETIME_INPUT_FORMATS = [
+    '%d/%m/%Y %H:%M',     # 17/04/2026 14:30
+    '%d.%m.%Y %H:%M',     # 17.04.2026 14:30
+    '%Y-%m-%d %H:%M:%S',   # 2026-04-17 14:30:59
+    '%Y-%m-%d %H:%M',      # 2026-04-17 14:30
+]
+
 LOGIN_URL = 'users:login'
 LOGIN_REDIRECT_URL = 'dashboard'
 LOGOUT_REDIRECT_URL = 'users:login'
+

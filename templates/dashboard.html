@@ -314,19 +314,26 @@
 
         <div class="lg:col-span-2 bg-gradient-to-br from-slate-800 to-slate-900 rounded-3xl p-6 sm:p-8 text-white shadow-xl">
             <h2 class="text-xl font-extrabold mb-6">Valyuta konvertori</h2>
-            <div class="grid grid-cols-1 sm:grid-cols-2 gap-4 items-center">
-                <div class="space-y-2">
-                    <label class="text-xs font-bold text-slate-400 uppercase">USD miqdori</label>
+            <div class="flex flex-col sm:flex-row items-center gap-4">
+                <div class="flex-1 w-full space-y-2">
+                    <label id="label-left" class="text-xs font-bold text-slate-400 uppercase">USD miqdori</label>
                     <div class="relative">
-                        <input type="number" id="usd-input" placeholder="0.00" class="w-full bg-white/10 border border-white/10 rounded-2xl px-4 py-3 text-white font-bold focus:ring-2 focus:ring-indigo-500 outline-none transition-all">
-                        <span class="absolute right-4 top-1/2 -translate-y-1/2 text-slate-400 font-bold">$</span>
+                        <input type="text" id="input-left" placeholder="0" class="w-full bg-white/10 border border-white/10 rounded-2xl px-4 py-3 text-white font-bold focus:ring-2 focus:ring-indigo-500 outline-none transition-all">
+                        <span id="symbol-left" class="absolute right-4 top-1/2 -translate-y-1/2 text-slate-400 font-bold">$</span>
                     </div>
                 </div>
-                <div class="space-y-2">
-                    <label class="text-xs font-bold text-slate-400 uppercase">UZS (Taxminiy)</label>
+
+                <div class="pt-6">
+                    <button id="swap-btn" class="w-10 h-10 rounded-full bg-white/5 border border-white/10 hover:bg-white/10 text-indigo-400 flex items-center justify-center transition-all shadow-lg group">
+                        <i class="fas fa-exchange-alt group-hover:rotate-180 transition-transform duration-500"></i>
+                    </button>
+                </div>
+
+                <div class="flex-1 w-full space-y-2">
+                    <label id="label-right" class="text-xs font-bold text-slate-400 uppercase">UZS miqdori</label>
                     <div class="relative">
-                        <input type="text" id="uzs-result" readonly class="w-full bg-white/5 border border-white/10 rounded-2xl px-4 py-3 text-indigo-300 font-black outline-none" value="0.00">
-                        <span class="absolute right-4 top-1/2 -translate-y-1/2 text-slate-400 text-[10px] font-bold">SO'M</span>
+                        <input type="text" id="input-right" placeholder="0" class="w-full bg-white/10 border border-white/10 rounded-2xl px-4 py-3 text-indigo-300 font-black focus:ring-2 focus:ring-indigo-500 outline-none transition-all">
+                        <span id="symbol-right" class="absolute right-4 top-1/2 -translate-y-1/2 text-slate-400 text-[10px] font-bold">SO'M</span>
                     </div>
                 </div>
             </div>
@@ -339,32 +346,119 @@
     document.addEventListener('DOMContentLoaded', function() {
         const apiKey = '8030951ae8aec0d043179270';
         const usdRateEl = document.getElementById('usd-rate');
-        const usdInput = document.getElementById('usd-input');
-        const uzsResult = document.getElementById('uzs-result');
+        const inputLeft = document.getElementById('input-left');
+        const inputRight = document.getElementById('input-right');
+        const labelLeft = document.getElementById('label-left');
+        const labelRight = document.getElementById('label-right');
+        const symbolLeft = document.getElementById('symbol-left');
+        const symbolRight = document.getElementById('symbol-right');
+        const swapBtn = document.getElementById('swap-btn');
 
         let currentRate = 12650;
+        let isSwapped = false; // false: Left=USD Right=UZS, true: Left=UZS Right=USD
+
+        function formatMoney(num, decimals = 0) {
+            if (num === null || num === undefined || isNaN(num)) return '';
+            return parseFloat(num).toLocaleString('en-US', {
+                minimumFractionDigits: decimals,
+                maximumFractionDigits: decimals
+            });
+        }
+
+        function parseMoney(str) {
+            return parseFloat(String(str).replace(/,/g, '')) || 0;
+        }
+
+        function updateInputs(changedId) {
+            if (changedId === 'input-left') {
+                const val = parseMoney(inputLeft.value);
+                if (val > 0) {
+                    // If left is USD (not swapped), right is UZS (0 decimals)
+                    // If left is UZS (swapped), right is USD (2 decimals)
+                    inputRight.value = isSwapped ? formatMoney(val / currentRate, 2) : formatMoney(val * currentRate, 0);
+                } else if (inputLeft.value === '') {
+                    inputRight.value = '';
+                }
+            } else {
+                const val = parseMoney(inputRight.value);
+                if (val > 0) {
+                    // If right is UZS (not swapped), left is USD (2 decimals)
+                    // If right is USD (swapped), left is UZS (0 decimals)
+                    inputLeft.value = isSwapped ? formatMoney(val * currentRate, 0) : formatMoney(val / currentRate, 2);
+                } else if (inputRight.value === '') {
+                    inputLeft.value = '';
+                }
+            }
+        }
 
         fetch(`https://v6.exchangerate-api.com/v6/${apiKey}/latest/USD`)
             .then(r => r.json())
             .then(data => {
                 if (data.result === 'success') {
                     currentRate = parseFloat(data.conversion_rates.UZS);
-                    usdRateEl.innerText = Math.round(currentRate).toLocaleString('en-US') + ' UZS';
+                    usdRateEl.innerText = formatMoney(currentRate, 0) + ' UZS';
                 }
             })
             .catch(() => {
-                usdRateEl.innerText = Math.round(currentRate).toLocaleString('en-US') + ' UZS';
+                usdRateEl.innerText = formatMoney(currentRate, 0) + ' UZS';
             });
 
-        usdInput.addEventListener('input', function() {
-            const val = parseFloat(this.value);
-            if (!isNaN(val) && val > 0) {
-                const total = val * currentRate;
-                uzsResult.value = Math.round(total).toLocaleString('en-US');
-            } else {
-                uzsResult.value = '0';
-            }
+        [inputLeft, inputRight].forEach(input => {
+            input.addEventListener('input', function(e) {
+                const pos = this.selectionStart;
+                const oldLen = this.value.length;
+                
+                let isUSD = (!isSwapped && this.id === 'input-left') || (isSwapped && this.id === 'input-right');
+                
+                // Clean input: allow numbers and one dot if USD
+                let rawVal = isUSD ? this.value.replace(/[^0-9.]/g, '') : this.value.replace(/[^0-9]/g, '');
+                
+                // Handle multiple dots
+                if (isUSD && rawVal.split('.').length > 2) {
+                    rawVal = rawVal.replace(/\.+$/, '');
+                }
+
+                if (rawVal === '') {
+                    this.value = '';
+                } else {
+                    if (isUSD && rawVal.includes('.')) {
+                        const parts = rawVal.split('.');
+                        this.value = parseInt(parts[0] || '0', 10).toLocaleString('en-US') + '.' + parts[1].substring(0, 2);
+                    } else {
+                        this.value = parseInt(rawVal, 10).toLocaleString('en-US');
+                    }
+                }
+
+                const newLen = this.value.length;
+                this.setSelectionRange(pos + (newLen - oldLen), pos + (newLen - oldLen));
+
+                updateInputs(this.id);
+            });
         });
+
+        if (swapBtn) {
+            swapBtn.addEventListener('click', function() {
+                isSwapped = !isSwapped;
+                
+                // Swap Labels
+                const tempLabel = labelLeft.innerText;
+                labelLeft.innerText = labelRight.innerText;
+                labelRight.innerText = tempLabel;
+
+                // Swap Symbols
+                const tempSymbol = symbolLeft.innerText;
+                symbolLeft.innerText = symbolRight.innerText;
+                symbolRight.innerText = tempSymbol;
+
+                // Swap Values
+                const tempVal = inputLeft.value;
+                inputLeft.value = inputRight.value;
+                inputRight.value = tempVal;
+
+                // Recalculate based on current state
+                updateInputs('input-left');
+            });
+        }
 
         // Format svetofor (budget) amounts with commas
         document.querySelectorAll('[id^="spent-"], [id^="limit-"]').forEach(function(el) {

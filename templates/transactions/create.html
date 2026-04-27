@@ -3,6 +3,8 @@
 {% block title %}Tranzaksiya - MoliyaBot{% endblock %}
 
 {% block content %}
+<link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/flatpickr/dist/flatpickr.min.css">
+<script src="https://cdn.jsdelivr.net/npm/flatpickr"></script>
 <div class="max-w-2xl mx-auto">
     <div class="bg-white border border-slate-200 rounded-3xl shadow-sm overflow-hidden">
         <div class="bg-blue-600 p-8 text-white">
@@ -10,9 +12,48 @@
             <p class="text-blue-100 text-sm opacity-90">Moliyaviy holatingizni aniq yozib boring.</p>
         </div>
 
+        <!-- Voice Transaction Card -->
+        <div id="voice-card" class="bg-gradient-to-br from-violet-600 to-indigo-700 p-6 text-white">
+            <div class="flex items-center justify-between gap-4">
+                <div>
+                    <h3 class="font-bold text-base flex items-center gap-2"><i class="fas fa-microphone-alt"></i> Ovozli kiritish</h3>
+                    <p class="text-violet-100 text-xs mt-1 leading-relaxed">Misol: "Tushlikka 25 ming sarfladim" yoki "Maoshim 5 million keldi"</p>
+                </div>
+                <button type="button" id="voice-btn" class="shrink-0 w-14 h-14 rounded-full bg-white/20 hover:bg-white/30 border-2 border-white/40 flex items-center justify-center transition-all shadow-lg" title="Mikrofonni yoqish">
+                    <i id="voice-icon" class="fas fa-microphone text-2xl"></i>
+                </button>
+            </div>
+            <div id="voice-status" class="mt-3 text-xs font-semibold text-violet-100 hidden"></div>
+            <div id="voice-result" class="mt-3 hidden bg-white/10 backdrop-blur rounded-xl p-3 text-sm">
+                <div id="voice-transcript" class="text-violet-100 italic mb-2"></div>
+                <div id="voice-parsed" class="text-white font-bold"></div>
+                <div class="flex gap-2 mt-3">
+                    <button type="button" id="voice-confirm" class="flex-1 bg-white text-indigo-700 font-bold py-2 rounded-lg hover:bg-violet-50 text-sm">Saqlash</button>
+                    <button type="button" id="voice-edit" class="flex-1 bg-white/20 hover:bg-white/30 font-bold py-2 rounded-lg text-sm">Formaga yuklash</button>
+                    <button type="button" id="voice-cancel" class="px-3 bg-white/10 hover:bg-white/20 rounded-lg text-sm">×</button>
+                </div>
+            </div>
+        </div>
+
         <form method="POST" class="p-8 space-y-6">
             {% csrf_token %}
-            
+
+            {% if form.errors %}
+            <div class="p-4 bg-red-50 border-l-4 border-red-500 text-red-700 text-sm space-y-1 rounded-r-xl mb-6">
+                <div class="flex items-center gap-2 font-bold mb-1">
+                    <i class="fas fa-exclamation-circle text-red-500"></i>
+                    Xatolik yuz berdi:
+                </div>
+                <ul class="list-disc list-inside">
+                    {% for field, errors in form.errors.items %}
+                        {% for error in errors %}
+                            <li>{{ field|capfirst }}: {{ error }}</li>
+                        {% endfor %}
+                    {% endfor %}
+                </ul>
+            </div>
+            {% endif %}
+
             <div class="grid grid-cols-1 md:grid-cols-2 gap-6">
                 <div>
                     <label class="block text-sm font-semibold text-slate-700 mb-2">Summa (so'm)</label>
@@ -22,7 +63,7 @@
                 </div>
                 <div>
                     <label class="block text-sm font-semibold text-slate-700 mb-2">Amal turi</label>
-                    <select name="type" class="w-full px-4 py-3 rounded-xl border border-slate-200 focus:ring-2 focus:ring-blue-50 outline-none bg-white">
+                    <select name="type" id="id_type" class="w-full px-4 py-3 rounded-xl border border-slate-200 focus:ring-2 focus:ring-blue-50 outline-none bg-white">
                         <option value="expense" {% if form.type.value == 'expense' %}selected{% endif %}>Xarajat (-)</option>
                         <option value="income" {% if form.type.value == 'income' %}selected{% endif %}>Daromad (+)</option>
                     </select>
@@ -32,18 +73,30 @@
             <div class="grid grid-cols-1 md:grid-cols-2 gap-6">
                 <div>
                     <label class="block text-sm font-semibold text-slate-700 mb-2">Kategoriya</label>
-                    <select name="category" class="w-full px-4 py-3 rounded-xl border border-slate-200 focus:ring-2 focus:ring-blue-50 outline-none bg-white">
-                        <option value="">Tanlang...</option>
-                        {% for cat in categories %}
-                        <option value="{{ cat.id }}" {% if form.category.value == cat.id|stringformat:"i" %}selected{% endif %}>{{ cat.name|capfirst }}</option>
+                    <select name="category" id="id_category" required class="w-full px-4 py-3 rounded-xl border border-slate-200 focus:ring-2 focus:ring-blue-50 outline-none bg-white">
+                        <option value="" selected disabled>Tanlang...</option>
+
+                        {% for cat in income_categories %}
+                            <option value="{{ cat.id }}" data-type="income">{{ cat.name|capfirst }}</option>
+                        {% endfor %}
+                        {% for cat in expense_categories %}
+                            <option value="{{ cat.id }}" data-type="expense">{{ cat.name|capfirst }}</option>
                         {% endfor %}
                     </select>
                 </div>
-                <div>
+                <div class="relative">
                     <label class="block text-sm font-semibold text-slate-700 mb-2">Sana</label>
-                    <input type="date" name="date" value="{{ form.date.value|date:'Y-m-d'|default:'' }}" required
-                           class="w-full px-4 py-3 rounded-xl border border-slate-200 focus:ring-2 focus:ring-blue-50 outline-none">
+                    <div class="relative">
+                        <input type="text" name="date" id="date_picker"
+                               required
+                               placeholder="Sana tanlang..."
+                               class="w-full px-4 py-3 rounded-xl border border-slate-200 focus:ring-2 focus:ring-blue-50 outline-none bg-white pr-10">
+                        <div class="absolute right-3 top-1/2 -translate-y-1/2 text-slate-400 pointer-events-none">
+                            <i class="fas fa-calendar-alt"></i>
+                        </div>
+                    </div>
                 </div>
+
             </div>
 
             <div>
@@ -63,4 +116,196 @@
         </form>
     </div>
 </div>
+
+<script>
+    const typeSelect = document.getElementById('id_type');
+    const categorySelect = document.getElementById('id_category');
+    const categoryOptions = categorySelect.querySelectorAll('option');
+
+    function filterCategories() {
+        const selectedType = typeSelect.value;
+
+        // Har safar tur o'zgarganda kategoriyani "Tanlang..." holatiga qaytaramiz
+        categorySelect.value = "";
+
+        categoryOptions.forEach(option => {
+            // "Tanlang..." variantini har doim ko'rsatamiz
+            if (option.value === "") {
+                option.style.display = 'block';
+                return;
+            }
+
+            // Qolganlarini turiga qarab filtrlash
+            if (option.getAttribute('data-type') === selectedType) {
+                option.style.display = 'block';
+                option.disabled = false;
+            } else {
+                option.style.display = 'none';
+                option.disabled = true;
+            }
+        });
+    }
+
+    typeSelect.addEventListener('change', filterCategories);
+    window.onload = filterCategories;
+
+    // ==============================
+    //  OVOZLI TRANZAKSIYA
+    // ==============================
+    (function() {
+        const btn = document.getElementById('voice-btn');
+        const icon = document.getElementById('voice-icon');
+        const statusEl = document.getElementById('voice-status');
+        const resultEl = document.getElementById('voice-result');
+        const transcriptEl = document.getElementById('voice-transcript');
+        const parsedEl = document.getElementById('voice-parsed');
+        const confirmBtn = document.getElementById('voice-confirm');
+        const editBtn = document.getElementById('voice-edit');
+        const cancelBtn = document.getElementById('voice-cancel');
+        if (!btn) return;
+
+        const SR = window.SpeechRecognition || window.webkitSpeechRecognition;
+        if (!SR) {
+            statusEl.textContent = 'Brauzer ovozni tanimaydi (Chrome ishlatishni tavsiya qilamiz).';
+            statusEl.classList.remove('hidden');
+            btn.disabled = true;
+            btn.classList.add('opacity-50', 'cursor-not-allowed');
+            return;
+        }
+
+        const recognition = new SR();
+        recognition.lang = 'uz-UZ';
+        recognition.interimResults = false;
+        recognition.maxAlternatives = 1;
+        let listening = false;
+        let lastParsed = null;
+
+        function setStatus(msg, isError) {
+            statusEl.textContent = msg;
+            statusEl.classList.remove('hidden');
+            statusEl.classList.toggle('text-red-200', !!isError);
+        }
+        function clearStatus() { statusEl.classList.add('hidden'); }
+
+        btn.addEventListener('click', () => {
+            if (listening) { recognition.stop(); return; }
+            try {
+                recognition.start();
+                listening = true;
+                icon.classList.remove('fa-microphone');
+                icon.classList.add('fa-circle', 'animate-pulse', 'text-red-300');
+                setStatus('Tinglayapman... Iltimos, gapiring.');
+                resultEl.classList.add('hidden');
+            } catch (e) {
+                setStatus('Boshlash imkonsiz: ' + e.message, true);
+            }
+        });
+
+        recognition.addEventListener('end', () => {
+            listening = false;
+            icon.classList.add('fa-microphone');
+            icon.classList.remove('fa-circle', 'animate-pulse', 'text-red-300');
+        });
+
+        recognition.addEventListener('error', (e) => {
+            setStatus('Xatolik: ' + e.error, true);
+        });
+
+        recognition.addEventListener('result', async (e) => {
+            const transcript = e.results[0][0].transcript;
+            transcriptEl.textContent = '"' + transcript + '"';
+            setStatus('Tahlil qilinmoqda...');
+            try {
+                const csrf = document.querySelector('input[name=csrfmiddlewaretoken]').value;
+                const resp = await fetch("{% url 'transactions:api_voice_parse' %}", {
+                    method: 'POST',
+                    headers: { 'Content-Type': 'application/json', 'X-CSRFToken': csrf },
+                    body: JSON.stringify({ transcript })
+                });
+                const data = await resp.json();
+                if (!resp.ok) {
+                    setStatus(data.error || 'Tushunilmadi', true);
+                    return;
+                }
+                lastParsed = data;
+                clearStatus();
+                const fmt = (n) => Number(n).toLocaleString('en-US');
+                const sign = data.type === 'income' ? '+' : '-';
+                const cat = data.category_name ? ' • ' + data.category_name : ' • (kategoriya tanlanmagan)';
+                parsedEl.textContent = `${sign} ${fmt(data.amount)} UZS${cat}`;
+                resultEl.classList.remove('hidden');
+            } catch (err) {
+                setStatus('Server xatosi: ' + err.message, true);
+            }
+        });
+
+        confirmBtn.addEventListener('click', async () => {
+            if (!lastParsed) return;
+            const csrf = document.querySelector('input[name=csrfmiddlewaretoken]').value;
+            confirmBtn.disabled = true;
+            confirmBtn.textContent = 'Saqlanmoqda...';
+            try {
+                const resp = await fetch("{% url 'transactions:api_voice_create' %}", {
+                    method: 'POST',
+                    headers: { 'Content-Type': 'application/json', 'X-CSRFToken': csrf },
+                    body: JSON.stringify({
+                        amount: lastParsed.amount,
+                        type: lastParsed.type,
+                        category_id: lastParsed.category_id,
+                        note: lastParsed.note,
+                    }),
+                });
+                const data = await resp.json();
+                if (resp.ok) {
+                    window.location.href = "{% url 'transactions:list' %}";
+                } else {
+                    setStatus(data.error || 'Saqlash imkonsiz', true);
+                    confirmBtn.disabled = false;
+                    confirmBtn.textContent = 'Saqlash';
+                }
+            } catch (err) {
+                setStatus('Server xatosi: ' + err.message, true);
+                confirmBtn.disabled = false;
+                confirmBtn.textContent = 'Saqlash';
+            }
+        });
+
+        editBtn.addEventListener('click', () => {
+            if (!lastParsed) return;
+            // Fill the form with parsed values
+            const amountInput = document.querySelector('input[name="amount"]');
+            const typeSel = document.getElementById('id_type');
+            const noteArea = document.querySelector('textarea[name="note"]');
+            const catSel = document.getElementById('id_category');
+
+            amountInput.value = Number(lastParsed.amount).toLocaleString('en-US');
+            typeSel.value = lastParsed.type;
+            typeSel.dispatchEvent(new Event('change'));
+            if (noteArea) noteArea.value = lastParsed.note || '';
+            if (lastParsed.category_id && catSel) catSel.value = lastParsed.category_id;
+            resultEl.classList.add('hidden');
+            amountInput.focus();
+        });
+
+        cancelBtn.addEventListener('click', () => {
+            resultEl.classList.add('hidden');
+            lastParsed = null;
+            clearStatus();
+        });
+    })();
+
+        document.addEventListener('DOMContentLoaded', function() {
+        flatpickr("#date_picker", {
+            dateFormat: "d/m/Y", // Qat'iy format: Kun/Oy/Yil
+            defaultDate: "today", // Standart holatda bugungi sana
+            locale: {
+                firstDayOfWeek: 1 // Haftani dushanbadan boshlash
+            },
+            // Agar tahrirlash bo'lsa, eski sanani yuklash uchun:
+            {% if form.date.value %}
+            defaultDate: "{{ form.date.value|date:'d/m/Y' }}",
+            {% endif %}
+        });
+    });
+</script>
 {% endblock %}

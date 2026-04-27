@@ -1,31 +1,44 @@
-import google.generativeai as genai
+from openai import OpenAI
 from django.conf import settings
 
-genai.configure(api_key=settings.GEMINI_API_KEY)
+client = OpenAI(
+    api_key=settings.OPENROUTER_API_KEY,
+    base_url="https://openrouter.ai/api/v1"
+)
 
 
 def get_ai_advice(goal, daily_needed, days_left):
-    model = genai.GenerativeModel("gemini-2.0-flash-lite")
+    try:
+        prompt = f"""
+        Sen professional moliyaviy maslahatchisan.
+        Faqat o‘zbek tilida javob ber.
 
-    prompt = f"""
-Sen professional moliyaviy maslahatchisan.
+        Maqsad: {goal.title}
+        Kerakli summa: {goal.target_amount}
+        Hozirgi summa: {goal.current_amount}
+        Qolgan kun: {days_left}
+        Kunlik yig‘ish kerak: {daily_needed}
 
-Maqsad: {goal.title}
-Kerakli summa: {goal.target_amount}
-Hozirgi summa: {goal.current_amount}
-Qolgan kun: {days_left}
-Kunlik yig‘ish kerak: {daily_needed}
+        1 ta qisqa tahlil yoz.
+        Keyin 3 ta tavsiya yoz (raqam bilan).
+        """
 
-1 ta qisqa tahlil yoz.
-Keyin 3 ta tavsiya yoz (raqam bilan).
-"""
+        response = client.chat.completions.create(
+            model="deepseek/deepseek-chat",
+            messages=[
+                {"role": "user", "content": prompt}
+            ]
+        )
 
-    response = model.generate_content(prompt)
+        text = response.choices[0].message.content.strip()
 
-    text = response.text.strip()
-    lines = [l.strip() for l in text.split("\n") if l.strip()]
+        lines = [l.strip() for l in text.split("\n") if l.strip()]
 
-    advice = lines[0] if lines else "AI javob yo‘q"
-    recommendations = lines[1:]
+        return lines[0], lines[1:]
 
-    return advice, recommendations
+    except Exception as e:
+        print("OpenRouter error:", e)
+        return (
+            "AI ishlamayapti",
+            ["Keyinroq urinib ko‘ring"]
+        )
