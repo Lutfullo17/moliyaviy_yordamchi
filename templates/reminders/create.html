@@ -1,17 +1,11 @@
-<!DOCTYPE html>
-<html lang="en">
-<head>
-    <meta charset="UTF-8">
-    <title>Title</title>
-</head>
-<body>
-
-</body>
-</html>a{% extends 'base.html' %}
+{% extends 'base.html' %}
 
 {% block title %}Yangi Eslatma{% endblock %}
 
 {% block content %}
+<link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/flatpickr/dist/flatpickr.min.css">
+<link rel="stylesheet" type="text/css" href="https://npmcdn.com/flatpickr/dist/themes/material_blue.css">
+
 <div class="max-w-xl mx-auto">
     <div class="bg-white border border-slate-200 rounded-3xl shadow-sm overflow-hidden">
         <div class="bg-gradient-to-r from-amber-400 to-amber-600 p-8 text-white">
@@ -43,10 +37,14 @@
             <div>
                 <label class="block text-sm font-semibold text-slate-700 mb-2">Eslatish vaqti</label>
                 <div class="relative">
-                    <input type="datetime-local" name="remind_time" required
-                           class="w-full px-4 py-3 rounded-xl border border-slate-200 focus:ring-4 focus:ring-amber-50 focus:border-amber-400 outline-none transition-all">
+                    <input type="text" id="remind_time_picker" name="remind_time" required
+                           placeholder="Sana va vaqtni tanlang"
+                           class="w-full px-4 py-3 rounded-xl border border-slate-200 focus:ring-4 focus:ring-amber-50 focus:border-amber-400 outline-none transition-all bg-white">
+                    <div class="absolute right-4 top-1/2 -translate-y-1/2 text-slate-400 pointer-events-none">
+                        <i class="fas fa-calendar-alt"></i>
+                    </div>
                 </div>
-                <p class="text-[11px] text-slate-400 mt-2 italic">Format: kun/oy/yil, soat:daqiqa</p>
+                <p class="text-[11px] text-slate-400 mt-2 italic">Format: DD.MM.YYYY, 24 soatlik vaqt</p>
             </div>
 
             <div class="flex gap-4 pt-4">
@@ -60,4 +58,18 @@
         </form>
     </div>
 </div>
-{% endblock %}
+
+<script src="https://cdn.jsdelivr.net/npm/flatpickr"></script>
+<script src="https://npmcdn.com/flatpickr/dist/l10n/uz.js"></script> <script>
+    document.addEventListener('DOMContentLoaded', function() {
+        flatpickr("#remind_time_picker", {
+            enableTime: true,
+            dateFormat: "d.m.Y H:i", // Sana.Oy.Yil Soat:Daqiqa (24 soatlik)
+            time_24hr: true,         // AM/PM ni o'chiradi
+            minDate: "today",        // O'tib ketgan sanani tanlab bo'lmaydi
+            locale: "uz",            // O'zbek tili (agar yuklangan bo'lsa)
+            allowInput: true
+        });
+    });
+</script>
+{% endblock %} 

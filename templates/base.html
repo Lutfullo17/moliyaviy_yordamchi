@@ -9,160 +9,176 @@
     <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css">
     <link href="https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700;800&display=swap" rel="stylesheet">
     
-    <!-- Alpine.js for interactive UI elements -->
     <script defer src="https://cdn.jsdelivr.net/npm/alpinejs@3.x.x/dist/cdn.min.js"></script>
 
-    <!-- Flatpickr for 24-hour time formatting -->
     <link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/flatpickr/dist/flatpickr.min.css">
     <script src="https://cdn.jsdelivr.net/npm/flatpickr"></script>
 
     <style>
-        body { font-family: 'Inter', sans-serif; }
-        .glassmorphism {
-            background: rgba(255, 255, 255, 0.7);
-            backdrop-filter: blur(10px);
-            -webkit-backdrop-filter: blur(10px);
-            border: 1px solid rgba(255, 255, 255, 0.3);
+        body { font-family: 'Inter', sans-serif; overflow-x: hidden; }
+        .sidebar-glass {
+            background: rgba(255, 255, 255, 0.8);
+            backdrop-filter: blur(15px);
+            border-right: 1px solid rgba(226, 232, 240, 0.8);
         }
+        .nav-item-active {
+            background: linear-gradient(to right, rgba(79, 70, 229, 0.1), rgba(147, 51, 234, 0.05));
+            color: #4f46e5;
+            border-right: 3px solid #4f46e5;
+        }
+        .custom-scrollbar::-webkit-scrollbar { width: 4px; }
+        .custom-scrollbar::-webkit-scrollbar-thumb { background: #e2e8f0; border-radius: 10px; }
+        [x-cloak] { display: none !important; }
     </style>
 </head>
-<body class="bg-slate-50 text-slate-800 min-h-screen flex flex-col font-sans antialiased selection:bg-indigo-200">
+<body class="bg-slate-50 text-slate-800 min-h-screen flex" x-data="{ sidebarOpen: window.innerWidth > 1024 }">
 
-    <!-- Notification Toast Container -->
-    <div id="toast-container" class="fixed top-20 right-4 z-50 flex flex-col gap-2 pointer-events-none"></div>
+    <div id="toast-container" class="fixed top-6 right-4 z-[60] flex flex-col gap-3 pointer-events-none"></div>
 
-    <nav class="glassmorphism sticky top-0 z-40 border-b border-indigo-100/50 shadow-sm transition-all" x-data="{ mobileMenuOpen: false, profileDropdown: false }">
-        <div class="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
-            <div class="flex justify-between h-16">
-                <div class="flex items-center">
-                    <a href="/" class="flex items-center gap-3 group">
-                        <div class="bg-gradient-to-br from-indigo-500 to-purple-600 text-white p-2.5 rounded-xl shadow-lg shadow-indigo-200 group-hover:scale-105 transition-transform duration-300">
-                            <i class="fas fa-wallet"></i>
-                        </div>
-                        <span class="text-2xl font-black tracking-tight bg-clip-text text-transparent bg-gradient-to-r from-indigo-600 to-purple-600">
-                                Moliyaviy<span class="text-slate-800">Yordamchi</span>
-                        </span>
+    <aside 
+        x-cloak
+        :class="sidebarOpen ? 'translate-x-0' : '-translate-x-full'"
+        class="fixed inset-y-0 left-0 z-50 w-72 sidebar-glass transform transition-transform duration-300 ease-in-out shadow-2xl lg:shadow-none flex flex-col"
+    >
+        <div class="h-20 flex items-center px-6 border-b border-slate-100">
+            <a href="/" class="flex items-center gap-3 group">
+                <div class="bg-gradient-to-br from-indigo-500 to-purple-600 text-white p-2.5 rounded-xl shadow-lg shadow-indigo-200 group-hover:rotate-12 transition-transform">
+                    <i class="fas fa-wallet text-xl"></i>
+                </div>
+                <span class="text-xl font-black tracking-tight bg-clip-text text-transparent bg-gradient-to-r from-indigo-600 to-purple-600">
+                    Moliya<span class="text-slate-800">Bot</span>
+                </span>
+            </a>
+        </div>
+
+        <nav class="flex-1 overflow-y-auto py-6 px-4 custom-scrollbar">
+            {% if user.is_authenticated %}
+                <div class="space-y-1">
+                    <p class="px-4 text-[11px] font-bold text-slate-400 uppercase tracking-[0.2em] mb-4">Asosiy Menu</p>
+                    
+                    <a href="{% url 'dashboard' %}" class="flex items-center gap-3 px-4 py-3.5 rounded-xl text-sm font-semibold text-slate-600 hover:bg-slate-50 hover:text-indigo-600 transition-all group">
+                        <i class="fas fa-chart-line w-5 text-slate-400 group-hover:text-indigo-500"></i> Bosh sahifa
+                    </a>
+                    <a href="{% url 'transactions:summary' %}" class="flex items-center gap-3 px-4 py-3.5 rounded-xl text-sm font-semibold text-slate-600 hover:bg-slate-50 hover:text-indigo-600 transition-all group">
+                        <i class="fas fa-exchange-alt w-5 text-slate-400 group-hover:text-indigo-500"></i> Tranzaksiyalar
+                    </a>
+                    <a href="{% url 'goals:list' %}" class="flex items-center gap-3 px-4 py-3.5 rounded-xl text-sm font-semibold text-slate-600 hover:bg-slate-50 hover:text-indigo-600 transition-all group">
+                        <i class="fas fa-bullseye w-5 text-slate-400 group-hover:text-indigo-500"></i> Maqsadlar
+                    </a>
+                    <a href="{% url 'daily-plan' %}" class="flex items-center gap-3 px-4 py-3.5 rounded-xl text-sm font-semibold text-slate-600 hover:bg-slate-50 hover:text-indigo-600 transition-all group">
+                        <i class="fas fa-tasks w-5 text-slate-400 group-hover:text-indigo-500"></i> Kunlik Reja
+                    </a>
+                    <a href="{% url 'categories:list' %}" class="flex items-center gap-3 px-4 py-3.5 rounded-xl text-sm font-semibold text-slate-600 hover:bg-slate-50 hover:text-indigo-600 transition-all group">
+                        <i class="fas fa-tags w-5 text-slate-400 group-hover:text-indigo-500"></i> Kategoriyalar
+                    </a>
+                    <a href="{% url 'reminders:list' %}" class="flex items-center gap-3 px-4 py-3.5 rounded-xl text-sm font-semibold text-slate-600 hover:bg-slate-50 hover:text-indigo-600 transition-all group">
+                        <i class="fas fa-clock w-5 text-slate-400 group-hover:text-indigo-500"></i> Eslatmalar
                     </a>
                 </div>
 
-                {% if user.is_authenticated %}
-                <div class="hidden lg:flex items-center space-x-6">
-                    <a href="{% url 'dashboard' %}" class="text-sm font-semibold text-slate-600 hover:text-indigo-600 transition-colors">Bosh sahifa</a>
-                    <a href="{% url 'transactions:summary' %}" class="text-sm font-semibold text-slate-600 hover:text-indigo-600 transition-colors">Tranzaksiyalar</a>
-                    <a href="{% url 'goals:list' %}" class="text-sm font-semibold text-slate-600 hover:text-indigo-600 transition-colors">Maqsadlar</a>
-                    <a href="{% url 'daily-plan' %}" class="text-sm font-semibold text-slate-600 hover:text-indigo-600 transition-colors">Reja</a>
-                    <a href="{% url 'categories:list' %}" class="text-sm font-semibold text-slate-600 hover:text-indigo-600 transition-colors">Kategoriyalar</a>
-                    <a href="{% url 'reminders:list' %}" class="text-sm font-semibold text-slate-600 hover:text-indigo-600 transition-colors">Eslatmalar</a>
+                <div class="mt-8 pt-8 border-t border-slate-100">
+                    <p class="px-4 text-[11px] font-bold text-slate-400 uppercase tracking-[0.2em] mb-4">Sozlamalar</p>
+                    <a href="{% url 'users:profile' %}" class="flex items-center gap-3 px-4 py-3.5 rounded-xl text-sm font-semibold text-slate-600 hover:bg-slate-50 hover:text-indigo-600 transition-all group">
+                        <i class="fas fa-user-cog w-5 text-slate-400 group-hover:text-indigo-500"></i> Profil Sozlamalari
+                    </a>
                 </div>
-
-                <div class="flex items-center gap-4">
-                    <!-- Notifications Bell -->
-                    <div class="relative" x-data="{ notifOpen: false, reqCount: 0 }" @click.away="notifOpen = false">
-                        <button @click="notifOpen = !notifOpen" class="relative p-2 text-slate-500 hover:text-indigo-600 hover:bg-slate-100 rounded-full transition-all focus:outline-none">
-                            <i class="fas fa-bell text-lg"></i>
-                            <span id="notif-badge" class="hidden absolute top-0.5 right-1 h-2.5 w-2.5 bg-red-500 rounded-full border-2 border-white"></span>
-                        </button>
-                        
-                        <div x-show="notifOpen" x-transition.opacity style="display: none;" class="absolute right-0 mt-2 w-80 bg-white rounded-xl shadow-xl shadow-slate-200 border border-slate-100 py-2 z-50 overflow-hidden">
-                            <div class="px-4 py-2 border-b border-slate-100 flex justify-between items-center">
-                                <h3 class="font-bold text-slate-800 text-sm">Bildirishnomalar</h3>
-                                <button id="mark-all-read-btn" class="hidden text-xs text-indigo-600 hover:text-indigo-800 font-semibold focus:outline-none">Barchasini o'qish</button>
-                            </div>
-                            <div id="notif-list" class="max-h-64 overflow-y-auto w-full">
-                                <div class="p-4 text-center text-sm text-slate-500 italic">Yangi xabarlar yo'q</div>
-                            </div>
-                        </div>
-                    </div>
-                    <div class="relative" x-data="{ open: false }" @click.away="open = false">
-                        <button @click="open = !open" class="flex items-center gap-2 focus:outline-none focus:ring-2 focus:ring-indigo-100 rounded-full p-1 transition-all hover:bg-slate-100">
-                            <div class="flex flex-col items-end mr-1 hidden sm:flex">
-                                <span class="text-xs font-bold text-slate-800">{{ user.username }}</span>
-                                <span class="text-[10px] text-slate-400 font-medium whitespace-nowrap overflow-hidden text-ellipsis max-w-[100px]">{{ user.email|default:'Profilni sozlang' }}</span>
-                            </div>
-                            {% if user.profile_picture %}
-                                <img src="{{ user.profile_picture.url }}" class="w-9 h-9 rounded-full border-2 border-white shadow-sm object-cover">
-                            {% else %}
-                                <div class="w-9 h-9 rounded-full bg-indigo-100 flex items-center justify-center text-indigo-600 font-bold border-2 border-white shadow-sm">
-                                    {{ user.username|first|upper }}
-                                </div>
-                            {% endif %}
-                            <i class="fas fa-chevron-down text-xs text-slate-400"></i>
-                        </button>
-                        
-                        <!-- Dropdown -->
-                        <div x-show="open" x-transition:enter="transition ease-out duration-200" x-transition:enter-start="opacity-0 scale-95" x-transition:enter-end="opacity-100 scale-100" x-transition:leave="transition ease-in duration-75" x-transition:leave-start="opacity-100 scale-100" x-transition:leave-end="opacity-0 scale-95" style="display: none;" class="absolute right-0 mt-2 w-48 bg-white rounded-xl shadow-lg shadow-slate-200 border border-slate-100 py-1 z-50 overflow-hidden">
-                            <a href="{% url 'users:profile' %}" class="block px-4 py-2.5 text-sm font-medium text-slate-700 hover:bg-indigo-50 hover:text-indigo-600">
-                                <i class="fas fa-user-circle mr-2 w-4"></i> Profil
-                            </a>
-                            <hr class="border-slate-100">
-                            <form action="{% url 'users:logout' %}" method="POST">
-                                {% csrf_token %}
-                                <button type="submit" class="block w-full text-left px-4 py-2.5 text-sm font-bold text-red-600 hover:bg-red-50">
-                                    <i class="fas fa-sign-out-alt mr-2 w-4"></i> Chiqish
-                                </button>
-                            </form>
-                        </div>
-                    </div>
-                    
-                    <!-- Mobile menu button -->
-                    <div class="flex items-center lg:hidden">
-                        <button @click="mobileMenuOpen = !mobileMenuOpen" class="text-slate-500 hover:text-slate-700 focus:outline-none">
-                            <i class="fas fa-bars text-xl"></i>
-                        </button>
-                    </div>
+            {% else %}
+                <div class="p-4 bg-indigo-50 rounded-2xl">
+                    <p class="text-sm text-indigo-700 font-medium mb-4 text-center">Tizimga kiring va moliyangizni boshqaring</p>
+                    <a href="{% url 'users:login' %}" class="block w-full py-3 bg-indigo-600 text-white text-center rounded-xl font-bold shadow-lg hover:bg-indigo-700 transition-all mb-2 text-sm">Kirish</a>
+                    <a href="{% url 'users:register' %}" class="block w-full py-3 bg-white text-indigo-600 text-center rounded-xl font-bold border border-indigo-100 hover:bg-indigo-50 transition-all text-sm">Ro'yxatdan o'tish</a>
                 </div>
-                {% else %}
-                <div class="flex items-center gap-3">
-                    <a href="{% url 'users:login' %}" class="text-sm font-bold text-slate-600 hover:text-indigo-600 py-2">Kirish</a>
-                    <a href="{% url 'users:register' %}" class="bg-gradient-to-r from-indigo-600 to-purple-600 text-white px-5 py-2.5 rounded-xl text-sm font-bold shadow-lg shadow-indigo-200 hover:shadow-indigo-300 transform hover:-translate-y-0.5 transition-all">Ro'yxatdan o'tish</a>
-                </div>
-                {% endif %}
-            </div>
-        </div>
+            {% endif %}
+        </nav>
 
         {% if user.is_authenticated %}
-        <!-- Mobile Menu -->
-        <div x-show="mobileMenuOpen" style="display: none;" class="lg:hidden bg-white border-t border-slate-100 py-2 px-4 space-y-1 shadow-lg absolute w-full left-0">
-            <a href="{% url 'dashboard' %}" class="block px-3 py-2 rounded-md text-base font-medium text-slate-700 hover:text-indigo-600 hover:bg-indigo-50">Bosh sahifa</a>
-            <a href="{% url 'transactions:summary' %}" class="block px-3 py-2 rounded-md text-base font-medium text-slate-700 hover:text-indigo-600 hover:bg-indigo-50">Tranzaksiyalar</a>
-            <a href="{% url 'goals:list' %}" class="block px-3 py-2 rounded-md text-base font-medium text-slate-700 hover:text-indigo-600 hover:bg-indigo-50">Maqsadlar</a>
-            <a href="{% url 'daily-plan' %}" class="block px-3 py-2 rounded-md text-base font-medium text-slate-700 hover:text-indigo-600 hover:bg-indigo-50">Reja</a>
-            <a href="{% url 'categories:list' %}" class="block px-3 py-2 rounded-md text-base font-medium text-slate-700 hover:text-indigo-600 hover:bg-indigo-50">Kategoriyalar</a>
-            <a href="{% url 'reminders:list' %}" class="block px-3 py-2 rounded-md text-base font-medium text-slate-700 hover:text-indigo-600 hover:bg-indigo-50">Eslatmalar</a>
+        <div class="p-4 border-t border-slate-100 bg-slate-50/50">
+            <div class="flex items-center gap-3 bg-white p-3 rounded-2xl border border-slate-200/60 shadow-sm">
+                {% if user.profile_picture %}
+                    <img src="{{ user.profile_picture.url }}" class="w-10 h-10 rounded-xl object-cover border border-slate-100">
+                {% else %}
+                    <div class="w-10 h-10 rounded-xl bg-gradient-to-tr from-indigo-500 to-purple-500 flex items-center justify-center text-white font-bold shadow-md">
+                        {{ user.username|first|upper }}
+                    </div>
+                {% endif %}
+                <div class="flex-1 min-w-0">
+                    <h4 class="text-xs font-bold text-slate-800 truncate">{{ user.username }}</h4>
+                    <p class="text-[10px] text-slate-500 truncate">{{ user.email|default:"Foydalanuvchi" }}</p>
+                </div>
+                <form action="{% url 'users:logout' %}" method="POST">
+                    {% csrf_token %}
+                    <button type="submit" class="p-2 text-slate-400 hover:text-red-500 hover:bg-red-50 rounded-lg transition-all">
+                        <i class="fas fa-sign-out-alt"></i>
+                    </button>
+                </form>
+            </div>
         </div>
         {% endif %}
-    </nav>
+    </aside>
 
-    <main class="flex-grow max-w-7xl mx-auto w-full px-4 sm:px-6 lg:px-8 py-8 sm:py-10">
-        {% block content %}
-        {% endblock %}
-    </main>
+    <div class="flex-1 flex flex-col min-w-0 transition-all duration-300" :class="sidebarOpen ? 'lg:ml-72' : 'ml-0'">
+        
+        <header class="h-20 bg-white/80 backdrop-blur-md sticky top-0 z-40 border-b border-slate-200/60 px-6 flex items-center justify-between">
+            <div class="flex items-center gap-4">
+                <button @click="sidebarOpen = !sidebarOpen" class="w-10 h-10 flex items-center justify-center rounded-xl bg-slate-100 text-slate-600 hover:bg-indigo-600 hover:text-white transition-all shadow-sm">
+                    <i class="fas fa-bars"></i>
+                </button>
+                <h2 class="text-lg font-bold text-slate-800 hidden md:block">Boshqaruv Paneli</h2>
+            </div>
 
-    <footer class="bg-white border-t border-slate-200 mt-auto">
-        <div class="max-w-7xl mx-auto px-4 py-8 flex flex-col md:flex-row justify-between items-center gap-4">
-            <div class="flex items-center gap-2">
+            <div class="flex items-center gap-2 sm:gap-4">
+                <div class="relative" x-data="{ notifOpen: false }" @click.away="notifOpen = false">
+                    <button @click="notifOpen = !notifOpen" class="w-10 h-10 flex items-center justify-center rounded-xl bg-slate-50 text-slate-500 hover:bg-indigo-50 hover:text-indigo-600 transition-all relative">
+                        <i class="fas fa-bell"></i>
+                        <span id="notif-badge" class="hidden absolute top-2.5 right-2.5 w-2 h-2 bg-red-500 rounded-full border-2 border-white"></span>
+                    </button>
+
+                    <div x-show="notifOpen" x-transition x-cloak class="absolute right-0 mt-3 w-80 bg-white rounded-2xl shadow-2xl border border-slate-100 overflow-hidden ring-1 ring-black/5">
+                        <div class="p-4 border-b border-slate-50 flex justify-between items-center bg-slate-50/50">
+                            <span class="text-sm font-bold text-slate-800">Bildirishnomalar</span>
+                            <button id="mark-all-read-btn" class="hidden text-[11px] font-bold text-indigo-600 uppercase tracking-wider">Tozalash</button>
+                        </div>
+                        <div id="notif-list" class="max-h-[400px] overflow-y-auto custom-scrollbar">
+                            <div class="p-8 text-center text-slate-400 italic text-sm">Xabarlar mavjud emas</div>
+                        </div>
+                    </div>
+                </div>
+
+                <div class="hidden sm:flex flex-col items-end px-2 border-l border-slate-100 ml-2">
+                    <span class="text-xs font-bold text-slate-800" id="current-date"></span>
+                    <span class="text-[10px] text-slate-400 uppercase tracking-widest font-medium">O'zbekiston</span>
+                </div>
+            </div>
+        </header>
+
+        <main class="flex-grow p-4 sm:p-6 lg:p-10">
+            {% block content %}
+            {% endblock %}
+        </main>
+
+        <footer class="p-6 bg-white border-t border-slate-100 flex flex-col md:flex-row justify-between items-center gap-4">
+            <div class="flex items-center gap-2 opacity-60">
                 <i class="fas fa-wallet text-indigo-600"></i>
-                <span class="text-lg font-black tracking-tight text-slate-800">Moliyaviy<span class="text-indigo-600">Yordamchi</span></span>
+                <span class="text-sm font-bold text-slate-800">MoliyaBot v2.0</span>
             </div>
-            <p class="text-sm text-slate-500 font-medium text-center">&copy; 2026 Moliyaviy Yordamchi. Barcha huquqlar himoyalangan.</p>
-            <div class="flex gap-4 text-slate-400">
-                <a href="#" class="hover:text-indigo-600 transition-colors"><i class="fab fa-telegram text-xl"></i></a>
-                <a href="#" class="hover:text-indigo-600 transition-colors"><i class="fab fa-instagram text-xl"></i></a>
+            <p class="text-xs font-medium text-slate-400">© 2026 Barcha huquqlar himoyalangan.</p>
+            <div class="flex gap-4">
+                <a href="#" class="w-8 h-8 flex items-center justify-center rounded-lg bg-slate-50 text-slate-400 hover:text-indigo-600 transition-colors"><i class="fab fa-telegram-plane"></i></a>
+                <a href="#" class="w-8 h-8 flex items-center justify-center rounded-lg bg-slate-50 text-slate-400 hover:text-purple-600 transition-colors"><i class="fab fa-instagram"></i></a>
             </div>
-        </div>
-    </footer>
+        </footer>
+    </div>
+
+    <div x-show="sidebarOpen" @click="sidebarOpen = false" class="fixed inset-0 bg-slate-900/40 backdrop-blur-sm z-40 lg:hidden" x-transition:opacity x-cloak></div>
 
     {% if user.is_authenticated %}
     <script>
         document.addEventListener('DOMContentLoaded', function() {
-            // Check for notifications permission
-            if ("Notification" in window) {
-                if (Notification.permission !== "granted" && Notification.permission !== "denied") {
-                    Notification.requestPermission();
-                }
-            }
+            // 1. Current Date Header
+            const options = { weekday: 'long', year: 'numeric', month: 'long', day: 'numeric' };
+            document.getElementById('current-date').textContent = new Date().toLocaleDateString('uz-UZ', options);
 
-            // Initialize Flatpickr for 24-hour time inputs globally
+            // 2. Flatpickr Global
             flatpickr("input[type=time]", {
                 enableTime: true,
                 noCalendar: true,
@@ -170,31 +186,27 @@
                 time_24hr: true
             });
 
+            // 3. Notification Logic
             function showToast(title, body) {
                 const container = document.getElementById('toast-container');
                 const toast = document.createElement('div');
-                toast.className = 'bg-white border-l-4 border-indigo-500 shadow-xl rounded-lg p-4 w-72 transform transition-all duration-300 translate-x-full opacity-0 pointer-events-auto flex items-start gap-3';
+                toast.className = 'bg-white border-l-4 border-indigo-600 shadow-2xl rounded-2xl p-4 w-80 transform transition-all duration-500 translate-x-full opacity-0 pointer-events-auto flex items-start gap-4 ring-1 ring-black/5';
                 
                 toast.innerHTML = `
-                    <div class="text-indigo-500 mt-0.5"><i class="fas fa-bell"></i></div>
-                    <div>
+                    <div class="bg-indigo-100 text-indigo-600 p-2 rounded-xl mt-0.5"><i class="fas fa-bell"></i></div>
+                    <div class="flex-1">
                         <h4 class="text-sm font-bold text-slate-800">${title}</h4>
-                        <p class="text-xs text-slate-500 mt-1">${body}</p>
+                        <p class="text-xs text-slate-500 mt-1 leading-relaxed">${body}</p>
                     </div>
+                    <button class="text-slate-300 hover:text-slate-500" onclick="this.parentElement.remove()"><i class="fas fa-times text-xs"></i></button>
                 `;
                 
                 container.appendChild(toast);
-                
-                // Animate in
-                setTimeout(() => {
-                    toast.classList.remove('translate-x-full', 'opacity-0');
-                }, 10);
-                
-                // Remove after 5 seconds
+                setTimeout(() => toast.classList.remove('translate-x-full', 'opacity-0'), 100);
                 setTimeout(() => {
                     toast.classList.add('translate-x-full', 'opacity-0');
-                    setTimeout(() => toast.remove(), 300);
-                }, 5000);
+                    setTimeout(() => toast.remove(), 500);
+                }, 6000);
             }
 
             function checkUpcomingTasks() {
@@ -212,113 +224,72 @@
                             
                             data.tasks.forEach(task => {
                                 const readBadgeKey = 'read_badge_' + task.id;
-                                if (!localStorage.getItem(readBadgeKey)) {
-                                    hasUnread = true;
-                                }
+                                if (!localStorage.getItem(readBadgeKey)) hasUnread = true;
 
                                 html += `
-                                <div class="px-4 py-3 hover:bg-slate-50 border-b border-slate-50 transition-colors">
+                                <div class="px-5 py-4 hover:bg-indigo-50/30 border-b border-slate-50 transition-colors group relative">
                                     <div class="flex items-start gap-3">
-                                        <div class="mt-1 flex-shrink-0 text-amber-500"><i class="fas fa-clock"></i></div>
-                                        <div>
-                                            <p class="text-sm font-semibold text-slate-800">${task.msgBody || 'Sizning vazifangiz bor'}</p>
-                                            <span class="text-xs font-bold text-amber-600 mt-1 block">${task.start_time}</span>
+                                        <div class="w-2 h-2 rounded-full bg-indigo-500 mt-1.5 shadow-sm"></div>
+                                        <div class="flex-1">
+                                            <p class="text-[13px] font-semibold text-slate-800 mb-1">${task.msgBody || 'Sizning vazifangiz bor'}</p>
+                                            <div class="flex items-center gap-2 text-indigo-600 font-bold text-[10px] uppercase tracking-wider">
+                                                <i class="fas fa-clock"></i> ${task.start_time}
+                                            </div>
                                         </div>
                                     </div>
                                 </div>`;
                                 
-                                // Prevent multiple notifications populating the toast
                                 const notifKey = 'notified_' + task.id;
                                 if (!localStorage.getItem(notifKey)) {
                                     const msgTitle = "Diqqat! Vazifa boshlanmoqda";
-                                    // Browser Push Notification
                                     if ("Notification" in window && Notification.permission === "granted") {
-                                        new Notification(msgTitle, { body: task.msgBody, icon: '/static/icons/wallet.png' });
+                                        new Notification(msgTitle, { body: task.msgBody });
                                     }
-                                    // UI Toast Notification
                                     showToast(msgTitle, task.msgBody);
-                                    
                                     localStorage.setItem(notifKey, new Date().getTime());
-                                    setTimeout(() => localStorage.removeItem(notifKey), 7200000);
                                 }
                             });
                             list.innerHTML = html;
-                            
                             if (hasUnread) {
                                 badge.classList.remove('hidden');
-                                if (markReadBtn) markReadBtn.classList.remove('hidden');
-                            } else {
-                                badge.classList.add('hidden');
-                                if (markReadBtn) markReadBtn.classList.add('hidden');
+                                markReadBtn.classList.remove('hidden');
                             }
-                        } else {
-                            window.currentTasks = [];
-                            badge.classList.add('hidden');
-                            if (markReadBtn) markReadBtn.classList.add('hidden');
-                            list.innerHTML = `<div class="p-4 text-center text-sm text-slate-500 italic">Yangi xabarlar yo'q</div>`;
                         }
-                    })
-                    .catch(err => console.error('Error fetching notifications:', err));
+                    }).catch(err => console.log('Notif error:', err));
             }
 
-            // Mark all as read listener
-            const markReadBtn = document.getElementById('mark-all-read-btn');
-            if (markReadBtn) {
-                markReadBtn.addEventListener('click', function(e) {
-                    e.stopPropagation();
-                    if (window.currentTasks) {
-                        window.currentTasks.forEach(task => {
-                            localStorage.setItem('read_badge_' + task.id, new Date().getTime());
-                        });
-                    }
-                    document.getElementById('notif-badge').classList.add('hidden');
-                    this.classList.add('hidden');
-                });
+            if ("Notification" in window && Notification.permission !== "denied") {
+                Notification.requestPermission();
             }
 
-            // Run check every minute
+            setInterval(checkUpcomingTasks, 45000);
             checkUpcomingTasks();
-            setInterval(checkUpcomingTasks, 30000); // 30 seconds
 
-            // =============================================
-            // GLOBAL MONEY FORMATTING (1,000,000 format)
-            // =============================================
+            // 4. Money Formatting Logic
             function formatMoney(num) {
                 const n = parseFloat(String(num).replace(/,/g, '')) || 0;
                 return Math.round(n).toLocaleString('en-US');
             }
 
-            // Format all display elements with class fmt-money
-            document.querySelectorAll('.fmt-money').forEach(function(el) {
+            document.querySelectorAll('.fmt-money').forEach(el => {
                 const raw = parseFloat(el.dataset.raw || el.textContent.replace(/,/g, '')) || 0;
                 el.textContent = formatMoney(raw);
             });
 
-            // Money input: type=text with comma formatting
-            document.querySelectorAll('.money-input').forEach(function(input) {
-                // Format existing value
-                if (input.value) {
-                    const raw = parseFloat(input.value.replace(/,/g, '')) || 0;
-                    if (raw > 0) input.value = formatMoney(raw);
-                }
-
+            document.querySelectorAll('.money-input').forEach(input => {
                 input.addEventListener('input', function() {
-                    const pos = this.selectionStart;
-                    const oldLen = this.value.length;
-                    const rawVal = this.value.replace(/[^0-9]/g, '');
-                    if (rawVal === '') { this.value = ''; return; }
-                    const formatted = parseInt(rawVal, 10).toLocaleString('en-US');
-                    this.value = formatted;
-                    // Restore cursor position
-                    const newLen = this.value.length;
-                    this.setSelectionRange(pos + (newLen - oldLen), pos + (newLen - oldLen));
+                    let pos = this.selectionStart;
+                    let oldLen = this.value.length;
+                    let rawVal = this.value.replace(/[^0-9]/g, '');
+                    if (!rawVal) { this.value = ''; return; }
+                    this.value = parseInt(rawVal, 10).toLocaleString('en-US');
+                    this.setSelectionRange(pos + (this.value.length - oldLen), pos + (this.value.length - oldLen));
                 });
 
-                // Before form submit, set hidden input or strip commas
                 const form = input.closest('form');
                 if (form && !input.dataset.hooked) {
                     input.dataset.hooked = '1';
-                    form.addEventListener('submit', function() {
+                    form.addEventListener('submit', () => {
                         input.value = input.value.replace(/,/g, '');
                     });
                 }
