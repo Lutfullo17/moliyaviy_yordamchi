@@ -6,7 +6,7 @@ class Goal(models.Model):
     title = models.CharField(max_length=200)
     target_amount = models.DecimalField(max_digits=12, decimal_places=2)
     current_amount = models.DecimalField(max_digits=12, decimal_places=2, default=0)
-    deadline = models.DateField()
+    deadline = models.DateField(verbose_name="Muddat")
     is_completed = models.BooleanField(default=False)
     created_at = models.DateTimeField(auto_now_add=True)
 

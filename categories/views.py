@@ -1,6 +1,7 @@
 from django.shortcuts import render, redirect, get_object_or_404
 from django.contrib.auth.decorators import login_required
 from django.utils import timezone
+from decimal import Decimal, InvalidOperation
 from .models import Category
 
 @login_required
@@ -30,17 +31,20 @@ def category_create(request):
                 'error': 'Kategoriya nomi kiritilishi shart!'
             })
 
+        if category_type not in ('expense', 'income'):
+            category_type = 'expense'
+
         # 2. Mantiqiy tekshiruv: Agar daromad bo'lsa, limitni bekor qilamiz
         if category_type == 'income':
-            monthly_limit = 0
+            monthly_limit = Decimal('0')
             limit_duration = None
         else:
             # Xarajat bo'lsa, limitni raqamga o'giramiz
             try:
                 raw_limit = str(limit).replace(',', '').strip()
-                monthly_limit = float(raw_limit) if raw_limit else 0
-            except ValueError:
-                monthly_limit = 0
+                monthly_limit = Decimal(raw_limit) if raw_limit else Decimal('0')
+            except (ValueError, InvalidOperation):
+                monthly_limit = Decimal('0')
 
             try:
                 limit_duration = int(limit_duration) if limit_duration else None
@@ -67,15 +71,17 @@ def category_update(request, pk):
     category = get_object_or_404(Category, pk=pk)
 
 
-    if category.user != request.user:
+    if category.user != request.user and not category.is_default:
         return redirect('categories:list')
 
-
-    if category.is_default:
+    # Standart daromad kategoriyalarida limit/tahrir kerak emas
+    if category.is_default and category.type == 'income':
         return redirect('categories:list')
 
     if request.method == 'POST':
-        name = request.POST.get('name')
+        # Standart kategoriya uchun nom/tur o'zgarmaydi, faqat limit tahrirlanadi
+        name = category.name if category.is_default else request.POST.get('name')
+        category_type = category.type if category.is_default else (request.POST.get('type') or category.type)
         limit = request.POST.get('monthly_limit', '0')
         limit_duration = request.POST.get('limit_duration')
 
@@ -85,21 +91,29 @@ def category_update(request, pk):
                 'category': category
             })
 
-        try:
-            raw_limit = str(limit).replace(',', '').strip()
-            monthly_limit = float(raw_limit) if raw_limit else 0
-        except ValueError:
-            monthly_limit = 0
+        if category_type not in ('expense', 'income'):
+            category_type = category.type
 
-        try:
-            limit_duration = int(limit_duration) if limit_duration else None
-        except ValueError:
+        if category_type == 'income':
+            monthly_limit = Decimal('0')
             limit_duration = None
+        else:
+            try:
+                raw_limit = str(limit).replace(',', '').strip()
+                monthly_limit = Decimal(raw_limit) if raw_limit else Decimal('0')
+            except (ValueError, InvalidOperation):
+                monthly_limit = Decimal('0')
+
+            try:
+                limit_duration = int(limit_duration) if limit_duration else None
+            except ValueError:
+                limit_duration = None
 
         category.name = name
+        category.type = category_type
         
         # Agar limit summasi yoki muddati o'zgarsa, vaqtni yangilaymiz
-        if float(category.monthly_limit) != monthly_limit or category.limit_duration != limit_duration:
+        if Decimal(str(category.monthly_limit)) != monthly_limit or category.limit_duration != limit_duration:
             if monthly_limit > 0:
                 category.limit_set_at = timezone.now()
             else:

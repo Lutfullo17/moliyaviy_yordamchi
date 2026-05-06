@@ -58,25 +58,8 @@ transaction_summary = transaction_list
 
 @login_required
 def transaction_create(request):
-    all_categories = _user_categories(request.user)
-    income_categories = all_categories.filter(type='income')
-    expense_categories = all_categories.filter(type='expense')
-
-    if request.method == 'POST':
-        form = TransactionForm(request.POST)
-        if form.is_valid():
-            transaction = form.save(commit=False)
-            transaction.user = request.user
-            transaction.save()
-            return redirect('transactions:list')
-    else:
-        form = TransactionForm()
-
-    return render(request, 'transactions/create.html', {
-        'form': form,
-        'income_categories': income_categories,
-        'expense_categories': expense_categories,
-    })
+    """Ovoz/matn parse API orqali qo'shiladi — klassik POST formasi yo'q."""
+    return render(request, 'transactions/create.html')
 
 
 @login_required
@@ -85,12 +68,12 @@ def transaction_update(request, pk):
     categories = _user_categories(request.user)
 
     if request.method == 'POST':
-        form = TransactionForm(request.POST, instance=transaction)
+        form = TransactionForm(request.POST, instance=transaction, user=request.user)
         if form.is_valid():
             form.save()
             return redirect('transactions:list')
     else:
-        form = TransactionForm(instance=transaction)
+        form = TransactionForm(instance=transaction, user=request.user)
 
     return render(request, 'transactions/update.html', {
         'form': form,
@@ -165,58 +148,89 @@ def voice_parse(request):
     if not transcript:
         return JsonResponse({'error': 'Bo\'sh matn'}, status=400)
 
-    from .voice_parser import parse_transaction_text
-    parsed = parse_transaction_text(transcript, request.user)
+    from .voice_parser import parse_all_transactions_text
 
-    if not parsed:
+    parsed_list = parse_all_transactions_text(transcript, request.user, try_ai_fallback=True)
+    if not parsed_list:
         return JsonResponse({'error': 'Tushunilmadi. Iltimos qayta urinib ko\'ring.'}, status=422)
 
-    return JsonResponse({
-        'transcript': transcript,
-        'amount': float(parsed['amount']),
-        'type': parsed['type'],
-        'category_id': parsed.get('category_id'),
-        'category_name': parsed.get('category_name'),
-        'note': parsed.get('note', ''),
-    })
+    def serialize(p):
+        return {
+            'amount': float(p['amount']),
+            'type': p['type'],
+            'category_id': p.get('category_id'),
+            'category_name': p.get('category_name'),
+            'note': p.get('note', ''),
+        }
+
+    rows = [serialize(p) for p in parsed_list]
+    payload = {'transcript': transcript, 'transactions': rows, 'count': len(rows)}
+    if len(parsed_list) == 1:
+        payload.update(rows[0])
+    return JsonResponse(payload)
 
 
 @login_required
 @require_POST
 def voice_create(request):
-    """Save a transaction parsed from voice/text."""
+    """Save one or many parsed transactions ({amount, type, category_id?, note})."""
     try:
         body = json.loads(request.body.decode('utf-8'))
     except (ValueError, UnicodeDecodeError):
         return JsonResponse({'error': 'Noto\'g\'ri so\'rov'}, status=400)
 
-    try:
-        amount = Decimal(str(body.get('amount', '0')))
-    except (InvalidOperation, ValueError):
-        return JsonResponse({'error': 'Summa noto\'g\'ri'}, status=400)
-    if amount <= 0:
-        return JsonResponse({'error': 'Summa 0 dan katta bo\'lishi kerak'}, status=400)
+    raw_rows = body.get('transactions')
+    if isinstance(raw_rows, list):
+        rows = raw_rows
+    elif raw_rows:
+        rows = [raw_rows]
+    else:
+        rows = [body]
 
-    t_type = body.get('type')
-    if t_type not in ('income', 'expense'):
-        return JsonResponse({'error': 'Tur noto\'g\'ri'}, status=400)
+    saved = 0
+    errors: list[str] = []
 
-    note = (body.get('note') or '').strip()[:255]
-    category_id = body.get('category_id')
-    category = None
-    if category_id:
-        category = Category.objects.filter(
-            id=category_id
-        ).filter(
-            user=request.user
-        ).first() or Category.objects.filter(id=category_id, is_default=True).first()
+    for item in rows:
+        if not isinstance(item, dict):
+            errors.append('noto\'g\'ri yozuv')
+            continue
+        try:
+            amount = Decimal(str(item.get('amount', '0')))
+        except (InvalidOperation, ValueError):
+            errors.append('summa')
+            continue
+        if amount <= 0:
+            errors.append('summa 0')
+            continue
 
-    Transaction.objects.create(
-        user=request.user,
-        amount=amount,
-        type=t_type,
-        category=category,
-        note=note,
-        date=timezone.now().date(),
-    )
-    return JsonResponse({'ok': True})
+        t_type = item.get('type')
+        if t_type not in ('income', 'expense'):
+            errors.append('tur')
+            continue
+
+        note = (item.get('note') or '').strip()[:255]
+        category_id = item.get('category_id')
+        category = None
+        if category_id:
+            category = Category.objects.filter(
+                id=category_id
+            ).filter(
+                user=request.user
+            ).first() or Category.objects.filter(id=category_id, is_default=True).first()
+
+        Transaction.objects.create(
+            user=request.user,
+            amount=amount,
+            type=t_type,
+            category=category,
+            note=note,
+            date=timezone.now().date(),
+        )
+        saved += 1
+
+    if not saved:
+        return JsonResponse(
+            {'ok': False, 'error': 'Hech bir tranzaksiya saqlanmadi', 'details': errors[:5]},
+            status=400,
+        )
+    return JsonResponse({'ok': True, 'saved': saved})

@@ -30,7 +30,7 @@ from django.db.models import Sum, Q
 from django.utils import timezone
 
 from transactions.models import Transaction
-from transactions.voice_parser import parse_transaction_text, transcribe_audio_bytes
+from transactions.voice_parser import parse_all_transactions_text, transcribe_audio_bytes
 from categories.models import Category
 from goals.models import Goal
 
@@ -414,17 +414,42 @@ def handle_voice(message):
             return
 
         bot.send_message(message.chat.id, f"📝 _Eshitildi:_ \"{text}\"", parse_mode="Markdown")
-        parsed = parse_transaction_text(text, user)
-        if not parsed:
+        parsed_list = parse_all_transactions_text(text, user, try_ai_fallback=True)
+        if not parsed_list:
             bot.send_message(
                 message.chat.id,
                 "❌ Summa topilmadi. Misol uchun: \"Tushlikka 25 ming sarfladim\".",
             )
             return
 
-        _ask_for_category(
-            message.chat.id, user,
-            parsed['type'], parsed['amount'], parsed.get('note') or text[:200],
+        saved_lines = []
+        for parsed in parsed_list:
+            amt = Decimal(str(parsed["amount"]))
+            cid = parsed.get("category_id")
+            category = (
+                Category.objects.filter(id=cid).filter(user=user).first()
+                or Category.objects.filter(id=cid, is_default=True).first()
+                if cid
+                else None
+            )
+            Transaction.objects.create(
+                user=user,
+                amount=amt,
+                type=parsed["type"],
+                category=category,
+                note=(parsed.get("note") or text)[:255],
+                date=timezone.now().date(),
+            )
+            sign = "➕" if parsed["type"] == "income" else "➖"
+            cat_name = category.name if category else "(kategoriyasiz)"
+            saved_lines.append(
+                f"{sign} `{fmt_money(amt)}` UZS • {cat_name}"
+            )
+
+        bot.send_message(
+            message.chat.id,
+            "✅ *Saqlandi:*\n" + "\n".join(saved_lines),
+            parse_mode="Markdown",
         )
     except Exception as e:
         bot.send_message(message.chat.id, f"⚠️ Xatolik: {e}")

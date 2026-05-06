@@ -1,4 +1,5 @@
 from django.shortcuts import render, redirect, get_object_or_404
+from django.contrib import messages
 from django.contrib.auth.decorators import login_required
 from django.utils import timezone
 from datetime import datetime
@@ -50,12 +51,21 @@ def task_create(request, plan_id):
                 except ValueError:
                     return None
 
+        start_t = clean_time(start_time_raw)
+        end_t = clean_time(end_time_raw)
+        if start_t and end_t and end_t <= start_t:
+            messages.error(
+                request,
+                "Tugash vaqti boshlanish vaqtidan oldinga o'tishi mumkin emas.",
+            )
+            return render(request, 'planner/task_form.html', {'plan': plan})
+
         Task.objects.create(
             day_plan=plan,
             title=request.POST.get('title'),
             description=request.POST.get('description'),
-            start_time=clean_time(start_time_raw),
-            end_time=clean_time(end_time_raw),
+            start_time=start_t,
+            end_time=end_t,
             priority=request.POST.get('priority', 'medium'),
             is_important=request.POST.get('is_important') == 'on'
         )
@@ -78,10 +88,19 @@ def task_update(request, task_id):
                 try: return datetime.strptime(time_str, "%H:%M:%S").time()
                 except ValueError: return None
 
+        start_t = clean_time(start_time_raw)
+        end_t = clean_time(end_time_raw)
+        if start_t and end_t and end_t <= start_t:
+            messages.error(
+                request,
+                "Tugash vaqti boshlanish vaqtidan oldinga o'tishi mumkin emas.",
+            )
+            return render(request, 'planner/task_update.html', {'task': task})
+
         task.title = request.POST.get('title')
         task.description = request.POST.get('description')
-        task.start_time = clean_time(start_time_raw)
-        task.end_time = clean_time(end_time_raw)
+        task.start_time = start_t
+        task.end_time = end_t
         task.priority = request.POST.get('priority', 'medium')
         task.is_important = request.POST.get('is_important') == 'on'
         task.save()

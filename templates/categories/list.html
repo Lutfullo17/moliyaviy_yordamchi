@@ -34,16 +34,51 @@
                 </div>
             </div>
 
+            <div class="mt-4 space-y-2 text-xs">
+                <div>
+                    {% if category.type == 'expense' %}
+                    <span class="inline-flex items-center gap-1 px-2 py-1 rounded-lg bg-rose-50 text-rose-700 font-semibold">
+                        <i class="fas fa-arrow-down"></i> Xarajat
+                    </span>
+                    {% else %}
+                    <span class="inline-flex items-center gap-1 px-2 py-1 rounded-lg bg-emerald-50 text-emerald-700 font-semibold">
+                        <i class="fas fa-arrow-up"></i> Daromad
+                    </span>
+                    {% endif %}
+                </div>
+                {% if category.type == 'expense' %}
+                <div class="text-slate-600">
+                    {% if category.monthly_limit and category.monthly_limit > 0 %}
+                        <span class="font-semibold">Limit:</span> {{ category.monthly_limit|floatformat:0 }} so'm
+                        {% if category.limit_duration %}
+                            <span class="text-slate-400">({{ category.limit_duration }} kun)</span>
+                        {% else %}
+                            <span class="text-slate-400">(oylik)</span>
+                        {% endif %}
+                    {% else %}
+                        <span class="text-slate-400">Limit qo'yilmagan</span>
+                    {% endif %}
+                </div>
+                {% endif %}
+            </div>
+
             <div class="mt-6 flex items-center gap-3 border-t border-slate-50 pt-4 opacity-0 group-hover:opacity-100 transition-opacity">
                 {% if not category.is_default %}
-                <a href="{% url 'categories:update' category.pk %}" class="text-xs font-medium text-blue-600 hover:text-blue-800 flex items-center gap-1">
-                    <i class="fas fa-edit"></i> Tahrirlash
-                </a>
-                <a href="{% url 'categories:delete' category.pk %}" class="text-xs font-medium text-red-500 hover:text-red-700 flex items-center gap-1">
-                    <i class="fas fa-trash"></i> O'chirish
-                </a>
+                    <a href="{% url 'categories:update' category.pk %}" class="text-xs font-medium text-blue-600 hover:text-blue-800 flex items-center gap-1">
+                        <i class="fas fa-edit"></i> Tahrirlash
+                    </a>
+                    <a href="{% url 'categories:delete' category.pk %}" class="text-xs font-medium text-red-500 hover:text-red-700 flex items-center gap-1">
+                        <i class="fas fa-trash"></i> O'chirish
+                    </a>
                 {% else %}
-                <span class="text-xs text-slate-400 italic">Standart kategoriya o'zgartirilmaydi</span>
+                    {% if category.type == 'expense' %}
+                        <a href="{% url 'categories:update' category.pk %}" class="text-xs font-medium text-blue-600 hover:text-blue-800 flex items-center gap-1">
+                            <i class="fas fa-edit"></i> Limit qo'yish
+                        </a>
+                        <span class="text-xs text-slate-400 italic">Standart kategoriya o'chirilmaydi</span>
+                    {% else %}
+                        <span class="text-xs text-slate-400 italic">Standart kategoriya o'zgartirilmaydi</span>
+                    {% endif %}
                 {% endif %}
             </div>
         </div>
