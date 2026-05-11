@@ -12,7 +12,7 @@ https://docs.djangoproject.com/en/6.0/ref/settings/
 
 import os
 from pathlib import Path
-from urllib.parse import urlparse
+from urllib.parse import unquote
 
 # Build paths inside the project like this: BASE_DIR / 'subdir'.
 BASE_DIR = Path(__file__).resolve().parent.parent
@@ -34,6 +34,43 @@ def _load_local_env():
 
 
 _load_local_env()
+
+
+def _parse_postgres_database_url(url: str) -> dict:
+    """Parse postgres/postgresql URLs; supports @ and : inside the password.
+
+    urllib.parse.urlparse breaks when the password contains unencoded '@'.
+    """
+    url = url.strip()
+    if not url.startswith(("postgres://", "postgresql://")):
+        raise ValueError("DATABASE_URL must start with postgres:// or postgresql://")
+    _, rest = url.split("://", 1)
+    if "?" in rest:
+        rest, _query = rest.split("?", 1)
+    if "@" not in rest:
+        raise ValueError("DATABASE_URL must include user:password@host")
+    userinfo, host_and_db = rest.rsplit("@", 1)
+    if ":" not in userinfo:
+        raise ValueError("DATABASE_URL must include user:password")
+    user, password = userinfo.split(":", 1)
+    user = unquote(user)
+    password = unquote(password)
+    if "/" not in host_and_db:
+        raise ValueError("DATABASE_URL must include a database name path")
+    host_port, _, db_path = host_and_db.partition("/")
+    name = unquote(db_path.split("/")[0])
+    if ":" in host_port:
+        host, port = host_port.rsplit(":", 1)
+    else:
+        host, port = host_port, "5432"
+    host = unquote(host)
+    return {
+        "NAME": name,
+        "USER": user,
+        "PASSWORD": password,
+        "HOST": host,
+        "PORT": port,
+    }
 
 
 # Quick-start development settings - unsuitable for production
@@ -110,24 +147,21 @@ GEMINI_API_KEY = os.getenv("GEMINI_API_KEY", "")
 
 _database_url = os.getenv("DATABASE_URL", "").strip()
 if _database_url:
-    parsed = urlparse(_database_url)
-    if parsed.scheme in {"postgres", "postgresql"}:
-        DATABASES = {
-            "default": {
-                "ENGINE": "django.db.backends.postgresql",
-                "NAME": (parsed.path or "").lstrip("/"),
-                "USER": parsed.username or "",
-                "PASSWORD": parsed.password or "",
-                "HOST": parsed.hostname or "",
-                "PORT": str(parsed.port or "5432"),
-                "CONN_MAX_AGE": int(os.getenv("DB_CONN_MAX_AGE", "60")),
-                "OPTIONS": {
-                    "sslmode": os.getenv("DB_SSLMODE", "require"),
-                },
-            }
+    _db_parts = _parse_postgres_database_url(_database_url)
+    DATABASES = {
+        "default": {
+            "ENGINE": "django.db.backends.postgresql",
+            "NAME": _db_parts["NAME"],
+            "USER": _db_parts["USER"],
+            "PASSWORD": _db_parts["PASSWORD"],
+            "HOST": _db_parts["HOST"],
+            "PORT": str(_db_parts["PORT"]),
+            "CONN_MAX_AGE": int(os.getenv("DB_CONN_MAX_AGE", "60")),
+            "OPTIONS": {
+                "sslmode": os.getenv("DB_SSLMODE", "require"),
+            },
         }
-    else:
-        raise ValueError("DATABASE_URL only supports postgres/postgresql schemes.")
+    }
 else:
     DATABASES = {
         "default": {
