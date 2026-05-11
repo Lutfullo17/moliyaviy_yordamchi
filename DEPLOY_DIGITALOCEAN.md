@@ -4,13 +4,13 @@ Ushbu loyiha `Django web + Telegram bot worker` dan iborat.
 
 ## 1) GitHub'ga push qiling
 
-Repo `main` branchga push bo'lishi kerak.
+Repo branch: **`deploy-clean`** (yoki o'zingiz tozalagan `master`).
 
 ## 2) DigitalOcean App yarating
 
 1. `cloud.digitalocean.com` -> **Apps** -> **Create App**
 2. GitHub repository'ni ulang
-3. Branch: `main`
+3. Branch: **`deploy-clean`**
 
 ## 3) Components qo'shing
 
@@ -19,9 +19,11 @@ Repo `main` branchga push bo'lishi kerak.
 - **Source dir**: repo root
 - **Build Command**:
   - `pip install -r requirements.txt`
-- **Run Command**:
-  - `python manage.py migrate && python manage.py collectstatic --noinput && gunicorn config.wsgi:application --bind 0.0.0.0:$PORT`
-- **HTTP Port**: avtomatik (`$PORT`)
+- **Run Command** (bittasini tanlang; bo'sh qoldirmang — bo'sh bo'lsa `No application module specified` chiqadi):
+  - **Tavsiya:** `bash scripts/do_web_start.sh` (migrate + collectstatic + `gunicorn`, `PORT` ishonchli)
+  - Yoki: `bash -c 'python manage.py migrate && python manage.py collectstatic --noinput && exec gunicorn config.wsgi:application --bind 0.0.0.0:${PORT:-8080}'`
+- **HTTP Port**: `8080` yoki platforma ko'rsatgan port (odatda `PORT` bilan bir xil)
+- **Procfile**: repoda `web:` qatori bor; agar UI-da Run Command bo'sh bo'lsa, buildpack shu qatorni ishlatishi mumkin — baribir UI-da yuqoridagi run commandni yozib qo'yish xavfsizroq.
 
 ### B) Worker (Telegram bot)
 - **Type**: Worker
@@ -29,7 +31,7 @@ Repo `main` branchga push bo'lishi kerak.
 - **Build Command**:
   - `pip install -r requirements.txt`
 - **Run Command**:
-  - `python bot.py`
+  - `python bot.py` (**faqat shu**; `gunicorn` emas — aks holda xuddi shu modul xatosi chiqadi)
 
 ## 4) Database (PostgreSQL) ulash
 
