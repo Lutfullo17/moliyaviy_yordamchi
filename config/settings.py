@@ -10,22 +10,46 @@ For the full list of settings and their values, see
 https://docs.djangoproject.com/en/6.0/ref/settings/
 """
 
+import os
 from pathlib import Path
+from urllib.parse import urlparse
 
 # Build paths inside the project like this: BASE_DIR / 'subdir'.
 BASE_DIR = Path(__file__).resolve().parent.parent
+
+
+def _load_local_env():
+    env_path = BASE_DIR / ".env"
+    if not env_path.exists():
+        return
+    for raw in env_path.read_text(encoding="utf-8").splitlines():
+        line = raw.strip()
+        if not line or line.startswith("#") or "=" not in line:
+            continue
+        key, value = line.split("=", 1)
+        key = key.strip()
+        value = value.strip().strip('"').strip("'")
+        if key and key not in os.environ:
+            os.environ[key] = value
+
+
+_load_local_env()
 
 
 # Quick-start development settings - unsuitable for production
 # See https://docs.djangoproject.com/en/6.0/howto/deployment/checklist/
 
 # SECURITY WARNING: keep the secret key used in production secret!
-SECRET_KEY = 'django-insecure-mj2s(stc(&35@$pq=%v1_+n#lmbgja-2t+5=vqja)c!#9qj44q'
+SECRET_KEY = os.getenv('SECRET_KEY', 'django-insecure-change-me')
 
 # SECURITY WARNING: don't run with debug turned on in production!
-DEBUG = True
+DEBUG = os.getenv('DEBUG', 'False').lower() in {'1', 'true', 'yes', 'on'}
 
-ALLOWED_HOSTS = ['*']
+_allowed_hosts_raw = os.getenv("ALLOWED_HOSTS", "").strip()
+if _allowed_hosts_raw:
+    ALLOWED_HOSTS = [host.strip() for host in _allowed_hosts_raw.split(",") if host.strip()]
+else:
+    ALLOWED_HOSTS = ["*"] if DEBUG else []
 
 
 # Application definition
@@ -45,10 +69,10 @@ INSTALLED_APPS = [
     'reminders',
 ]
 
-OPENROUTER_API_KEY = "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"
-CURRENCY_API_KEY = '8030951ae8aec0d043179270'
-TELEGRAM_BOT_TOKEN = '8743342641:AAEQaqxqGyBxU-4jvfyVwks0XjiL2JALmhQ'
-TELEGRAM_BOT_USERNAME = 'moliyaYordam_bot'
+OPENROUTER_API_KEY = os.getenv("OPENROUTER_API_KEY", "")
+CURRENCY_API_KEY = os.getenv('CURRENCY_API_KEY', '')
+TELEGRAM_BOT_TOKEN = os.getenv('TELEGRAM_BOT_TOKEN', '')
+TELEGRAM_BOT_USERNAME = os.getenv('TELEGRAM_BOT_USERNAME', 'moliyaYordam_bot')
 
 MIDDLEWARE = [
     'django.middleware.security.SecurityMiddleware',
@@ -79,17 +103,38 @@ TEMPLATES = [
 
 WSGI_APPLICATION = 'config.wsgi.application'
 
-GEMINI_API_KEY = "AIzaSyDxxqXUSF4mustMKSJ0WmPywMKoXGzhnNk"
+GEMINI_API_KEY = os.getenv("GEMINI_API_KEY", "")
 
 # Database
 # https://docs.djangoproject.com/en/6.0/ref/settings/#databases
 
-DATABASES = {
-    'default': {
-        'ENGINE': 'django.db.backends.sqlite3',
-        'NAME': BASE_DIR / 'db.sqlite3',
+_database_url = os.getenv("DATABASE_URL", "").strip()
+if _database_url:
+    parsed = urlparse(_database_url)
+    if parsed.scheme in {"postgres", "postgresql"}:
+        DATABASES = {
+            "default": {
+                "ENGINE": "django.db.backends.postgresql",
+                "NAME": (parsed.path or "").lstrip("/"),
+                "USER": parsed.username or "",
+                "PASSWORD": parsed.password or "",
+                "HOST": parsed.hostname or "",
+                "PORT": str(parsed.port or "5432"),
+                "CONN_MAX_AGE": int(os.getenv("DB_CONN_MAX_AGE", "60")),
+                "OPTIONS": {
+                    "sslmode": os.getenv("DB_SSLMODE", "require"),
+                },
+            }
+        }
+    else:
+        raise ValueError("DATABASE_URL only supports postgres/postgresql schemes.")
+else:
+    DATABASES = {
+        "default": {
+            "ENGINE": "django.db.backends.sqlite3",
+            "NAME": BASE_DIR / "db.sqlite3",
+        }
     }
-}
 
 
 # Password validation
@@ -127,6 +172,7 @@ USE_TZ = True
 # https://docs.djangoproject.com/en/6.0/howto/static-files/
 
 STATIC_URL = 'static/'
+STATIC_ROOT = BASE_DIR / "staticfiles"
 
 
 
@@ -174,3 +220,6 @@ LOGIN_URL = 'users:login'
 LOGIN_REDIRECT_URL = 'dashboard'
 LOGOUT_REDIRECT_URL = 'users:login'
 
+GROQ_API_KEY = os.getenv("GROQ_API_KEY", "")
+OPENAI_API_KEY = os.getenv("OPENAI_API_KEY", "")
+OPENAI_STT_MODEL = os.getenv("OPENAI_STT_MODEL", "gpt-4o-transcribe")

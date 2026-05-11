@@ -1,0 +1,7 @@
+Django>=5.1,<7
+gunicorn>=22
+psycopg2-binary>=2.9
+requests>=2.31
+openai>=1.40
+pyTelegramBotAPI>=4.20
+google-genai>=0.3.0
