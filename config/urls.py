@@ -17,6 +17,7 @@ urlpatterns = [
     path('goals/', include('goals.urls')),
     path('planner/', include('planner.urls')),
     path('reminders/', include('reminders.urls')),
+    path('api/', include('it_navigator.urls')),
 ]
 
 if settings.DEBUG:

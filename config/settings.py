@@ -43,6 +43,7 @@ INSTALLED_APPS = [
     'transactions',
     'goals',
     'reminders',
+    'it_navigator',
 ]
 
 OPENROUTER_API_KEY = "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"
